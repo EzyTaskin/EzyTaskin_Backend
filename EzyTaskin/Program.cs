@@ -4,6 +4,7 @@ using EzyTaskin.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using PostmarkDotNet;
 using System.Security.Claims;
 
@@ -86,8 +87,23 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
-    app.UseSwagger();
-    app.UseSwaggerUI();
+
+    app.UseSwagger(options =>
+    {
+        var servers = builder.Configuration.GetSection("Swagger:Servers").Get<List<string>>();
+
+        if (servers is not null && servers.Count > 0)
+        {
+            options.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
+            {
+                swaggerDoc.Servers = [.. servers.Select(s => new OpenApiServer { Url = s })];
+            });
+        }
+    });
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("v1/swagger.json", "v1");
+    });
 }
 
 app.UseHttpsRedirection();
