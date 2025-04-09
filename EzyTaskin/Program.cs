@@ -19,6 +19,22 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
         ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
+builder.Services.AddCors(options =>
+{
+    var servers = builder.Configuration.GetSection("AllowedOrigins").Get<List<string>>();
+
+    options.AddPolicy(name: "AllowedOriginsConfiguration", policy =>
+    {
+        if (servers is not null && servers.Count > 0)
+        {
+            policy.WithOrigins([.. servers])
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .SetIsOriginAllowedToAllowWildcardSubdomains();
+        }
+    });
+});
+
 var adminDomain = builder.Configuration["Admin:Domain"];
 builder.Services.AddAuthorization(options =>
 {
@@ -107,6 +123,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowedOriginsConfiguration");
 
 app.UseAuthorization();
 
