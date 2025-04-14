@@ -23,7 +23,7 @@ builder.Services.AddCors(options =>
 {
     var servers = builder.Configuration.GetSection("AllowedOrigins").Get<List<string>>();
 
-    options.AddPolicy(name: "AllowedOriginsConfiguration", policy =>
+    options.AddDefaultPolicy(policy =>
     {
         if (servers is not null && servers.Count > 0)
         {
@@ -99,6 +99,8 @@ builder.Services
 
 var app = builder.Build();
 
+app.UseCors();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -123,8 +125,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-app.UseCors("AllowedOriginsConfiguration");
 
 app.UseAuthorization();
 
