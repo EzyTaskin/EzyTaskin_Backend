@@ -177,13 +177,13 @@ public class AccountController : ControllerBase
             { "action", LoginCallbackAction }
         };
 
-        var RedirectToReferrerUrl = $"{Request.Scheme}://" +
+        var redirectUrl = $"{Request.Scheme}://" +
             $"{Request.Host.ToUriComponent()}" +
             $"/api/Account/{nameof(ExternalCallback)}" +
             QueryString.Create(query);
 
         var properties = _signInManager
-            .ConfigureExternalAuthenticationProperties(provider, RedirectToReferrerUrl);
+            .ConfigureExternalAuthenticationProperties(provider, redirectUrl);
 
         return Challenge(properties, [provider]);
     }
