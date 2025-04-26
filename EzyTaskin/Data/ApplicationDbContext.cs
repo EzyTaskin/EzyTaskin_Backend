@@ -9,6 +9,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<Message> Messages { get; set; }
 
+    public DbSet<Notification> Notifications { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -17,6 +19,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             b.HasOne(e => e.Sender).WithMany();
             b.HasOne(e => e.Receiver).WithMany();
+        });
+
+        builder.Entity<Notification>(b =>
+        {
+            b.HasOne(e => e.Account).WithMany();
         });
     }
 }
