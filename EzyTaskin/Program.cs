@@ -93,6 +93,8 @@ else
 
 builder.Services.AddControllers();
 
+builder.Services.AddScoped<MessageService>();
+
 builder.Services
     .AddEndpointsApiExplorer()
     .AddSwaggerGen();
