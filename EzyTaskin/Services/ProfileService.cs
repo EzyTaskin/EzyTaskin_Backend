@@ -65,6 +65,37 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
         return ToModel(dbProvider);
     }
 
+    public async Task<Data.Model.Consumer> CreateConsumer(Guid accountId)
+    {
+        using var dbContext = DbContext;
+        using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var dbAccount = await dbContext.Users.SingleAsync(u => u.Id == $"{accountId}");
+
+        var dbConsumer = (await dbContext.Consumers.AddAsync(new()
+        {
+            Account = dbAccount,
+            RequestsPosted = 0,
+            RequestsCompleted = 0
+        })).Entity;
+
+        await dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return ToModel(dbConsumer);
+    }
+
+    public async Task<Data.Model.Consumer?> GetConsumer(Guid accountId)
+    {
+        using var dbContext = DbContext;
+
+        var dbConsumer = await dbContext.Consumers
+            .Include(c => c.Account)
+            .SingleOrDefaultAsync(p => p.Account.Id == $"{accountId}");
+
+        return ToModel(dbConsumer);
+    }
+
     [return: NotNullIfNotNull(nameof(dbProvider))]
     private static Data.Model.Provider? ToModel(Data.Db.Provider? dbProvider)
     {
@@ -77,6 +108,18 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
             IsPremium = dbProvider.IsPremium,
             IsSubscriptionActive = dbProvider.IsSubscriptionActive,
             SubscriptionDate = dbProvider.SubscriptionDate
+        };
+    }
+
+    [return: NotNullIfNotNull(nameof(dbConsumer))]
+    private static Data.Model.Consumer? ToModel(Data.Db.Consumer? dbConsumer)
+    {
+        return dbConsumer == null ? null : new()
+        {
+            Id = dbConsumer.Id,
+            Account = Guid.Parse(dbConsumer.Account.Id),
+            RequestsPosted = dbConsumer.RequestsPosted,
+            RequestsCompleted = dbConsumer.RequestsCompleted
         };
     }
 }

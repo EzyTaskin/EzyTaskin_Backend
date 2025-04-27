@@ -21,7 +21,7 @@ public class ProfileController : ControllerBase
         _paymentService = paymentService;
     }
 
-    [HttpPost("Provider")]
+    [HttpPost(nameof(Provider))]
     [Authorize]
     public async Task<ActionResult> CreateProvider(
         [FromQuery] string? returnUrl
@@ -49,7 +49,7 @@ public class ProfileController : ControllerBase
         }
     }
 
-    [HttpGet("Provider")]
+    [HttpGet(nameof(Provider))]
     [Authorize]
     public async Task<ActionResult<Provider>> GetProvider(
         [FromQuery] Guid? accountId
@@ -87,7 +87,7 @@ public class ProfileController : ControllerBase
         }
     }
 
-    [HttpPatch("Provider")]
+    [HttpPatch(nameof(Provider))]
     [Authorize]
     public async Task<ActionResult> UpdateProvider(
         [FromForm] string? description,
@@ -122,7 +122,7 @@ public class ProfileController : ControllerBase
         }
     }
 
-    [HttpPost($"Provider/{nameof(ActivatePremium)}")]
+    [HttpPost($"{nameof(Provider)}/{nameof(ActivatePremium)}")]
     [Authorize]
     public async Task<ActionResult> ActivatePremium(
         [FromQuery] string? returnUrl,
@@ -199,7 +199,7 @@ public class ProfileController : ControllerBase
         }
     }
 
-    [HttpPost($"Provider/{nameof(DeactivatePremium)}")]
+    [HttpPost($"{nameof(Provider)}/{nameof(DeactivatePremium)}")]
     [Authorize]
     public async Task<ActionResult> DeactivatePremium(
         [FromQuery] string? returnUrl
@@ -237,6 +237,66 @@ public class ProfileController : ControllerBase
         catch
         {
             return this.RedirectWithError(ErrorStrings.ErrorTryAgain);
+        }
+    }
+
+    [HttpPost(nameof(Consumer))]
+    [Authorize]
+    public async Task<ActionResult> CreateConsumer(
+        [FromQuery] string? returnUrl
+    )
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest();
+        }
+
+        var accountId = this.TryGetAccountId();
+        if (accountId == Guid.Empty)
+        {
+            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+        }
+
+        try
+        {
+            await _profileService.CreateConsumer(accountId);
+            return this.RedirectToReferrer(returnUrl ?? "/");
+        }
+        catch
+        {
+            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+        }
+    }
+
+    [HttpGet(nameof(Consumer))]
+    [Authorize]
+    public async Task<ActionResult<Consumer>> GetConsumer(
+        [FromQuery] Guid? accountId
+    )
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest();
+        }
+
+        accountId ??= this.TryGetAccountId();
+        if (accountId.Value == Guid.Empty)
+        {
+            return BadRequest();
+        }
+
+        try
+        {
+            var consumer = await _profileService.GetConsumer(accountId.Value);
+            if (consumer is null)
+            {
+                return NotFound();
+            }
+            return Ok(consumer);
+        }
+        catch
+        {
+            return BadRequest();
         }
     }
 }
