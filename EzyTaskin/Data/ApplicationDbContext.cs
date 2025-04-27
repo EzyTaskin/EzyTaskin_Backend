@@ -8,8 +8,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     : IdentityDbContext<Account>(options)
 {
     public DbSet<Message> Messages { get; set; }
-
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<PaymentMethod> PaymentMethods { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -24,6 +24,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Notification>(b =>
         {
             b.HasOne(e => e.Account).WithMany();
+        });
+
+        builder.Entity<PaymentMethod>(b =>
+        {
+            b.HasOne(e => e.Account).WithMany();
+            b.HasDiscriminator(e => e.Type)
+                .HasValue<CardPaymentMethod>(nameof(CardPaymentMethod));
         });
     }
 }
