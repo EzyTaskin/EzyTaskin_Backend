@@ -7,13 +7,21 @@ namespace EzyTaskin.Data;
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
     : IdentityDbContext<Account>(options)
 {
+    public DbSet<Consumer> Consumers { get; set; }
     public DbSet<Message> Messages { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
+    public DbSet<Provider> Providers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<Consumer>(b =>
+        {
+            b.HasOne(e => e.Account).WithOne()
+                .HasForeignKey<Account>($"{nameof(Account)}Id");
+        });
 
         builder.Entity<Message>(b =>
         {
@@ -31,6 +39,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             b.HasOne(e => e.Account).WithMany();
             b.HasDiscriminator(e => e.Type)
                 .HasValue<CardPaymentMethod>(nameof(CardPaymentMethod));
+        });
+
+        builder.Entity<Provider>(b =>
+        {
+            b.HasOne(e => e.Account).WithOne()
+                .HasForeignKey<Account>($"{nameof(Account)}Id");
         });
     }
 }

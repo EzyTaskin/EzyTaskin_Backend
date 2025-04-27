@@ -56,7 +56,7 @@ public class PaymentController : ControllerBase
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(error: "Session expired.", includeForm: false);
+            return this.RedirectWithError(error: ErrorStrings.SessionExpired, includeForm: false);
         }
 
         try
@@ -66,10 +66,7 @@ public class PaymentController : ControllerBase
         }
         catch
         {
-            return this.RedirectWithError(
-                error: "An error occurred. Please try again.",
-                includeForm: false
-            );
+            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain, includeForm: false);
         }
     }
 }
