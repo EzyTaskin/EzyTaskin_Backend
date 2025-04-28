@@ -256,6 +256,7 @@ public class RequestController : ControllerBase
     }
 
     [HttpPost($"{nameof(Offer)}/{nameof(SelectOffer)}")]
+    [Authorize]
     public async Task<ActionResult> SelectOffer(
         [FromForm, Required] Guid requestId,
         [FromForm, Required] Guid offerId,
