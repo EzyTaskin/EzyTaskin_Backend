@@ -17,6 +17,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Provider> Providers { get; set; }
     public DbSet<RequestCategory> RequestCategories { get; set; }
     public DbSet<Request> Requests { get; set; }
+    public DbSet<Review> Reviews { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -80,6 +81,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             b.HasOne(e => e.Consumer).WithMany();
             b.HasOne(e => e.Selected).WithOne()
                 .HasForeignKey<Offer>($"{nameof(Offer)}Id");
+        });
+
+        builder.Entity<Review>(b =>
+        {
+            b.HasOne(e => e.Request).WithOne()
+                .HasForeignKey<Request>($"{nameof(Request)}Id");
         });
     }
 }
