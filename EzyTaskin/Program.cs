@@ -93,6 +93,7 @@ else
 
 builder.Services.AddControllers();
 
+builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<PaymentService>();

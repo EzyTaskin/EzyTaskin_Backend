@@ -10,14 +10,17 @@ namespace EzyTaskin.Controllers;
 public class ProfileController : ControllerBase
 {
     private readonly ProfileService _profileService;
+    private readonly CategoryService _categoryService;
     private readonly PaymentService _paymentService;
 
     public ProfileController(
         ProfileService profileService,
+        CategoryService categoryService,
         PaymentService paymentService
     )
     {
         _profileService = profileService;
+        _categoryService = categoryService;
         _paymentService = paymentService;
     }
 
@@ -78,6 +81,10 @@ public class ProfileController : ControllerBase
             provider.AverageRating =
                 (decimal)provider.TotalRating.GetValueOrDefault() / provider.ReviewCount;
             provider.TotalRating = null;
+
+            // Populate categories.
+            provider.Categories =
+                await _categoryService.GetProviderCategories(provider.Id).ToArrayAsync();
 
             return Ok(provider);
         }
