@@ -12,8 +12,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Message> Messages { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
+    public DbSet<Offer> Offers { get; set; }
     public DbSet<ProviderCategory> ProviderCategories { get; set; }
     public DbSet<Provider> Providers { get; set; }
+    public DbSet<RequestCategory> RequestCategories { get; set; }
+    public DbSet<Request> Requests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -48,6 +51,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .HasValue<CardPaymentMethod>(nameof(CardPaymentMethod));
         });
 
+        builder.Entity<Offer>(b =>
+        {
+            b.HasOne(e => e.Provider).WithMany();
+            b.HasOne(e => e.Request).WithMany();
+        });
+
         builder.Entity<ProviderCategory>(b =>
         {
             b.HasOne(e => e.Provider).WithMany();
@@ -58,6 +67,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             b.HasOne(e => e.Account).WithOne()
                 .HasForeignKey<Account>($"{nameof(Account)}Id");
+        });
+
+        builder.Entity<RequestCategory>(b =>
+        {
+            b.HasOne(e => e.Request).WithMany();
+            b.HasOne(e => e.Category).WithMany();
+        });
+
+        builder.Entity<Request>(b =>
+        {
+            b.HasOne(e => e.Consumer).WithMany();
+            b.HasOne(e => e.Selected).WithOne()
+                .HasForeignKey<Offer>($"{nameof(Offer)}Id");
         });
     }
 }

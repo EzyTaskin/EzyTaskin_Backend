@@ -98,6 +98,7 @@ builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<RequestService>();
 
 builder.Services
     .AddEndpointsApiExplorer()
