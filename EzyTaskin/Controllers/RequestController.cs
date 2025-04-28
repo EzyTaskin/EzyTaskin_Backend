@@ -148,7 +148,7 @@ public class RequestController : ControllerBase
     [HttpPost(nameof(CompleteRequest))]
     [Authorize]
     public async Task<ActionResult> CompleteRequest(
-        [FromBody, Required] Guid requestId,
+        [FromForm, Required] Guid requestId,
         [FromQuery] string? returnUrl
     )
     {
@@ -218,7 +218,7 @@ public class RequestController : ControllerBase
     [HttpPost(nameof(Offer))]
     [Authorize]
     public async Task<ActionResult> CreateOffer(
-        [FromBody, Required] Guid requestId,
+        [FromForm, Required] Guid requestId,
         [FromQuery] string? returnUrl
     )
     {
@@ -257,8 +257,8 @@ public class RequestController : ControllerBase
 
     [HttpPost($"{nameof(Offer)}/{nameof(SelectOffer)}")]
     public async Task<ActionResult> SelectOffer(
-        [FromBody, Required] Guid requestId,
-        [FromBody, Required] Guid offerId,
+        [FromForm, Required] Guid requestId,
+        [FromForm, Required] Guid offerId,
         [FromQuery] string? returnUrl
     )
     {
