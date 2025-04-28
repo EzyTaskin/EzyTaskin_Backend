@@ -17,61 +17,6 @@ public class CategoryService(DbContextOptions<ApplicationDbContext> dbContextOpt
         }
     }
 
-    public async IAsyncEnumerable<Data.Model.Category> SetProviderCategories(
-        Guid providerId,
-        ICollection<Guid> categoryId
-    )
-    {
-        using var dbContext = DbContext;
-        using var transaction = await dbContext.Database.BeginTransactionAsync();
-
-        var dbCategories = await dbContext.Categories
-            .Join(categoryId, c => c.Id, i => i, (c, _) => c)
-            .ToListAsync();
-
-        if (dbCategories.Count != categoryId.Count)
-        {
-            yield break;
-        }
-
-        var oldDbProviderCategories = await dbContext.ProviderCategories
-            .Include(pc => pc.Provider)
-            .Where(pc => pc.Provider.Id == providerId)
-            .ToListAsync();
-        dbContext.ProviderCategories.RemoveRange(oldDbProviderCategories);
-
-        var dbProvider = await dbContext.Providers.SingleAsync(p => p.Id == providerId);
-
-        foreach (var dbCategory in dbCategories)
-        {
-            dbContext.ProviderCategories.Add(new()
-            {
-                Provider = dbProvider,
-                Category = dbCategory
-            });
-
-            yield return ToModel(dbCategory);
-        }
-
-        await dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-    }
-
-    public async IAsyncEnumerable<Data.Model.Category> GetProviderCategories(
-        Guid providerId
-    )
-    {
-        using var dbContext = DbContext;
-        var query = dbContext.ProviderCategories
-            .Include(pc => pc.Provider)
-            .Include(pc => pc.Category)
-            .Where(pc => pc.Provider.Id == providerId);
-        await foreach (var dbProviderCategory in query.AsAsyncEnumerable())
-        {
-            yield return ToModel(dbProviderCategory.Category);
-        }
-    }
-
     [return: NotNullIfNotNull(nameof(dbCategory))]
     private static Data.Model.Category? ToModel(Data.Db.Category? dbCategory)
     {

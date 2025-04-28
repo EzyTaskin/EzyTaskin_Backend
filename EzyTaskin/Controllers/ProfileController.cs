@@ -10,17 +10,14 @@ namespace EzyTaskin.Controllers;
 public class ProfileController : ControllerBase
 {
     private readonly ProfileService _profileService;
-    private readonly CategoryService _categoryService;
     private readonly PaymentService _paymentService;
 
     public ProfileController(
         ProfileService profileService,
-        CategoryService categoryService,
         PaymentService paymentService
     )
     {
         _profileService = profileService;
-        _categoryService = categoryService;
         _paymentService = paymentService;
     }
 
@@ -84,7 +81,7 @@ public class ProfileController : ControllerBase
 
             // Populate categories.
             provider.Categories =
-                await _categoryService.GetProviderCategories(provider.Id).ToArrayAsync();
+                await _profileService.GetProviderCategories(provider.Id).ToArrayAsync();
 
             return Ok(provider);
         }
@@ -98,6 +95,7 @@ public class ProfileController : ControllerBase
     [Authorize]
     public async Task<ActionResult> UpdateProvider(
         [FromForm] string? description,
+        [FromForm] ICollection<Guid>? categoryId,
         [FromQuery] string? returnUrl
     )
     {
@@ -119,8 +117,31 @@ public class ProfileController : ControllerBase
             {
                 return this.RedirectWithError(ErrorStrings.NotAProvider);
             }
+
+            if (categoryId is not null)
+            {
+                if (categoryId.Count == 0
+                    || categoryId.Count == 1 && categoryId.Single() == Guid.Empty)
+                {
+                    await _profileService.SetProviderCategories(provider.Id, [])
+                        .ToListAsync();
+                }
+                else
+                {
+                    var succeed =
+                        await _profileService.SetProviderCategories(provider.Id, categoryId)
+                            .AnyAsync();
+
+                    if (!succeed)
+                    {
+                        return this.RedirectWithError(ErrorStrings.InvalidCategory);
+                    }
+                }
+            }
+
             provider.Description = description;
             await _profileService.UpdateProvider(provider);
+
             return this.RedirectToReferrer(returnUrl ?? "/");
         }
         catch

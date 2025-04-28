@@ -4,6 +4,8 @@ public static class ErrorStrings
 {
     public static string ErrorTryAgain => "An error occurred. Please try again.";
 
+    public static string InvalidCategory => "The specified category is invalid.";
+
     public static string InvalidPaymentMethod => "The specified payment method is invalid.";
 
     public static string NotAProvider => "This functionality is only available to providers.";
