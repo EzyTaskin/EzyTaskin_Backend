@@ -11,11 +11,15 @@ public class Message
     [Key]
     public Guid Id { get; set; }
 
+    [Required]
     public required DateTime Timestamp { get; set; }
 
+    [Required]
     public required Account Sender { get; set; }
 
+    [Required]
     public required Account Receiver { get; set; }
 
+    [Required]
     public required string Content { get; set; }
 }

@@ -9,6 +9,7 @@ public class Provider
     [Key]
     public Guid Id { get; set; }
 
+    [Required]
     public required Account Account { get; set; }
 
     public string? Description { get; set; }

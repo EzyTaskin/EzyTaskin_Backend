@@ -9,6 +9,7 @@ public class Consumer
     [Key]
     public Guid Id { get; set; }
 
+    [Required]
     public required Account Account { get; set; }
 
     public int RequestsPosted { get; set; }
