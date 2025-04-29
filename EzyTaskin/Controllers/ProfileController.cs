@@ -74,9 +74,12 @@ public class ProfileController : ControllerBase
                 return NotFound();
             }
 
-            // To the client, hide precise total rating in favor of an "average" rating.
-            provider.AverageRating =
-                (decimal)provider.TotalRating.GetValueOrDefault() / provider.ReviewCount;
+            if (provider.ReviewCount != 0)
+            {
+                // To the client, hide precise total rating in favor of an "average" rating.
+                provider.AverageRating =
+                    (decimal)provider.TotalRating.GetValueOrDefault() / provider.ReviewCount;
+            }
             provider.TotalRating = null;
 
             // Populate categories.
