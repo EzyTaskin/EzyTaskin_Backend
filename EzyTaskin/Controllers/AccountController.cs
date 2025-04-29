@@ -1,6 +1,7 @@
 ﻿using EzyTaskin.Data;
 using EzyTaskin.Utils;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -169,12 +170,15 @@ public class AccountController : ControllerBase
         [FromQuery]
         bool isPersistent,
         [FromQuery]
+        string referrer,
+        [FromQuery]
         string returnUrl
     )
     {
         var query = new Dictionary<string, string?> {
             { nameof(returnUrl), returnUrl },
             { nameof(isPersistent), isPersistent.ToString().ToLowerInvariant() },
+            { nameof(referrer), referrer },
             { "action", LoginCallbackAction }
         };
 
@@ -196,9 +200,22 @@ public class AccountController : ControllerBase
         [FromQuery]
         bool isPersistent,
         [FromQuery]
+        string referrer,
+        [FromQuery]
         string returnUrl
     )
     {
+        if (referrer is not null)
+        {
+            // Set the referrer to the frontend instead of the external provider.
+            Request.GetTypedHeaders().Referer = new Uri(referrer);
+        }
+        else
+        {
+            // Fall back to ourselves instead of confusing the external provider.
+            Request.GetTypedHeaders().Referer = new Uri(Request.GetDisplayUrl());
+        }
+
         var externalLoginInfo = await _signInManager.GetExternalLoginInfoAsync();
         if (externalLoginInfo is null)
         {
@@ -235,9 +252,9 @@ public class AccountController : ControllerBase
 
                 return this.RedirectToReferrerWithQuery("/Account/ExternalLogin",
                     new Dictionary<string, object?>() {
-                    { nameof(email), email },
-                    { nameof(providerDisplayName), providerDisplayName },
-                    { nameof(returnUrl), returnUrl }
+                        { nameof(email), email },
+                        { nameof(providerDisplayName), providerDisplayName },
+                        { nameof(returnUrl), returnUrl }
                     }
                 );
             }
