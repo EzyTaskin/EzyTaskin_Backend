@@ -31,7 +31,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Consumer>(b =>
         {
             b.HasOne(e => e.Account).WithOne()
-                .HasForeignKey<Account>($"{nameof(Account)}Id");
+                .HasForeignKey<Consumer>($"{nameof(Account)}Id");
         });
 
         builder.Entity<Message>(b =>
@@ -67,7 +67,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Provider>(b =>
         {
             b.HasOne(e => e.Account).WithOne()
-                .HasForeignKey<Account>($"{nameof(Account)}Id");
+                .HasForeignKey<Provider>($"{nameof(Account)}Id");
         });
 
         builder.Entity<RequestCategory>(b =>
@@ -80,13 +80,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             b.HasOne(e => e.Consumer).WithMany();
             b.HasOne(e => e.Selected).WithOne()
-                .HasForeignKey<Offer>($"{nameof(Offer)}Id");
+                .HasForeignKey<Request>($"{nameof(Offer)}Id");
         });
 
         builder.Entity<Review>(b =>
         {
             b.HasOne(e => e.Request).WithOne()
-                .HasForeignKey<Request>($"{nameof(Request)}Id");
+                .HasForeignKey<Review>($"{nameof(Request)}Id");
         });
     }
 }
