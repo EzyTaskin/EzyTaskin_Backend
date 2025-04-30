@@ -173,6 +173,7 @@ public class RequestController : ControllerBase
 
             var request = await _requestService.GetRequest(requestId);
             if (request is null
+                || request.Selected is null
                 || request.Selected?.Provider != provider.Id)
             {
                 return this.RedirectWithError(error: ErrorStrings.InvalidRequest);
@@ -201,10 +202,13 @@ public class RequestController : ControllerBase
                 return this.RedirectWithError(error: ErrorStrings.RequestAlreadyComplete);
             }
 
+            var price = request.Selected.Price ?? request.Budget;
+            price = Math.Min(price, request.Budget);
+
             await _paymentService.Transfer(
                 fromId: consumerPaymentMethod.Id,
                 toId: providerPaymentMethod.Id,
-                amount: request.Budget
+                amount: price
             );
 
             return this.RedirectToReferrer(returnUrl ?? "/");
