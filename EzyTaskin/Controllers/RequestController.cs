@@ -219,6 +219,7 @@ public class RequestController : ControllerBase
     [Authorize]
     public async Task<ActionResult> CreateOffer(
         [FromForm, Required] Guid requestId,
+        [FromForm] decimal? price,
         [FromQuery] string? returnUrl
     )
     {
@@ -241,10 +242,31 @@ public class RequestController : ControllerBase
                 return this.RedirectWithError(error: ErrorStrings.NotAProvider);
             }
 
+            if (price.HasValue)
+            {
+                // TODO: Check if premium state is updated?
+                if (!provider.IsPremium)
+                {
+                    return this.RedirectWithError(error: ErrorStrings.PremiumRequired);
+                }
+
+                var request = await _requestService.GetRequest(requestId);
+                if (request is null)
+                {
+                    return this.RedirectWithError(error: ErrorStrings.InvalidRequest);
+                }
+
+                if (price.Value > request.Budget)
+                {
+                    return this.RedirectWithError(error: ErrorStrings.OfferPriceExceedsBudget);
+                }
+            }
+
             await _requestService.CreateOffer(new()
             {
                 Provider = provider.Id,
-                Request = requestId
+                Request = requestId,
+                Price = price
             });
 
             return this.RedirectToReferrer(returnUrl ?? "/");

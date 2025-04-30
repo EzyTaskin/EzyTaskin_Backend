@@ -14,4 +14,6 @@ public class Offer
 
     [Required]
     public required Request Request { get; set; }
+
+    public decimal? Price { get; set; }
 }

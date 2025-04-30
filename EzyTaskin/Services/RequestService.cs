@@ -186,7 +186,8 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         var dbOffer = (await dbContext.Offers.AddAsync(new()
         {
             Provider = dbProvider,
-            Request = dbRequest
+            Request = dbRequest,
+            Price = offer.Price
         })).Entity;
 
         await dbContext.SaveChangesAsync();
@@ -261,7 +262,8 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         {
             Id = dbOffer.Id,
             Provider = dbOffer.Provider.Id,
-            Request = dbOffer.Request.Id
+            Request = dbOffer.Request.Id,
+            Price = dbOffer.Price
         };
     }
 

@@ -7,4 +7,6 @@ public class Offer
     public required Guid Provider { get; set; }
 
     public required Guid Request { get; set; }
+
+    public required decimal? Price { get; set; }
 }

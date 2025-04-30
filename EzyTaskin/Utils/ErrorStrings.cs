@@ -18,9 +18,13 @@ public static class ErrorStrings
 
     public static string NotAProvider => "This functionality is only available to providers.";
 
+    public static string OfferPriceExceedsBudget => "Offer price exceeds service request's budget";
+
     public static string PremiumAlreadyActive => "You already have an active Premium subscription.";
 
     public static string PremiumNotActive => "You do not have an active Premium subscription.";
+
+    public static string PremiumRequired => "This feature requires a Premium account.";
 
     public static string RequestAlreadyComplete => "This request is already complete.";
 
