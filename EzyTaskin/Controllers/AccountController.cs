@@ -34,6 +34,28 @@ public class AccountController : ControllerBase
         _emailSender = emailSender;
     }
 
+    [HttpGet]
+    public async Task<ActionResult<Data.Model.Account>> GetAccount()
+    {
+        var userId = this.TryGetAccountId();
+        if (userId == Guid.Empty)
+        {
+            return NotFound();
+        }
+
+        var user = await _userManager.FindByIdAsync($"{userId}");
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new Data.Model.Account()
+        {
+            Id = Guid.Parse(user.Id),
+            Email = user.Email!
+        });
+    }
+
     [HttpPost(nameof(Login))]
     public async Task<ActionResult> Login(
         [FromForm]
