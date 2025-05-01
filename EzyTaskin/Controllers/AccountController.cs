@@ -171,6 +171,9 @@ public class AccountController : ControllerBase
     public async Task<ActionResult> Register(
         [FromForm]
         [Required]
+        string fullName,
+        [FromForm]
+        [Required]
         [EmailAddress(ErrorMessage = "The email is invalid.")]
         string email,
         [FromForm]
@@ -199,7 +202,10 @@ public class AccountController : ControllerBase
             );
         }
 
-        var user = new Account();
+        var user = new Account()
+        {
+            FullName = fullName
+        };
 
         await _userStore.SetUserNameAsync(user, email, CancellationToken.None);
         await ((IUserEmailStore<Account>)_userStore)
