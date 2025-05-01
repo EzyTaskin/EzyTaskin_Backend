@@ -68,7 +68,8 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
             requestCategoriesQuery = requestCategoriesQuery
                 .Join(category, rc => rc.Category.Id, id => id, (rc, _) => rc);
         }
-        requestCategoriesQuery = requestCategoriesQuery.DistinctBy(rc => rc.Request);
+        // https://github.com/dotnet/efcore/issues/27470
+        // requestCategoriesQuery = requestCategoriesQuery.DistinctBy(rc => rc.Request);
 
         var query = requestCategoriesQuery
             .Select(rc => rc.Request)
@@ -78,6 +79,10 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         {
             query = query.Where(r => r.Location == location);
         }
+
+        // Distinct requests.
+        query = query.GroupBy(r => r.Id)
+            .Select(g => g.First());
 
         var keywordSet = keywords?.ToLowerInvariant()?.Split().ToHashSet();
 
