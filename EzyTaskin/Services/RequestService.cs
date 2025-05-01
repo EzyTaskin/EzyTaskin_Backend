@@ -77,13 +77,16 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
     {
         using var dbContext = DbContext;
 
-        var query = dbContext.Requests.AsQueryable();
+        var query = dbContext.Requests
+            .Include(r => r.Consumer)
+            .AsQueryable();
 
         if (category is not null && category.Count > 0)
         {
             var requestCategoriesQuery = dbContext.RequestCategories
                 .Include(rc => rc.Category)
                 .Include(rc => rc.Request)
+                    .ThenInclude(r => r.Consumer)
                 .Where(rc => category.Contains(rc.Category.Id));
 
             // https://github.com/dotnet/efcore/issues/27470
