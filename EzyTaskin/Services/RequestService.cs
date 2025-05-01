@@ -63,10 +63,10 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
             .Include(rc => rc.Category)
             .Include(rc => rc.Request)
             .AsQueryable();
-        if (category is not null)
+        if (category is not null && category.Count > 0)
         {
             requestCategoriesQuery = requestCategoriesQuery
-                .Join(category, rc => rc.Category.Id, id => id, (rc, _) => rc);
+                .Where(rc => category.Contains(rc.Category.Id));
         }
         // https://github.com/dotnet/efcore/issues/27470
         // requestCategoriesQuery = requestCategoriesQuery.DistinctBy(rc => rc.Request);
