@@ -52,8 +52,67 @@ public class AccountController : ControllerBase
         return Ok(new Data.Model.Account()
         {
             Id = Guid.Parse(user.Id),
-            Email = user.Email!
+            Email = user.Email!,
+            FullName = user.FullName,
+            PhoneNumber = user.PhoneNumber,
+            Address = user.Address
         });
+    }
+
+    [HttpPatch]
+    [Authorize]
+    public async Task<ActionResult> UpdateAccount(
+        [FromForm] string? fullName,
+        [FromForm] string? phoneNumber,
+        [FromForm] string? address,
+        [FromQuery] string? returnUrl
+    )
+    {
+        var userId = this.TryGetAccountId();
+        if (userId == Guid.Empty)
+        {
+            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+        }
+
+        var user = await _userManager.FindByIdAsync($"{userId}");
+        if (user is null)
+        {
+            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+        }
+
+        if (fullName is not null)
+        {
+            user.FullName = fullName;
+        }
+
+        if (phoneNumber is not null)
+        {
+            if (_userStore is IUserPhoneNumberStore<Account> phoneNumberStore)
+            {
+                await phoneNumberStore.SetPhoneNumberAsync(
+                    user, phoneNumber, CancellationToken.None
+                );
+            }
+            else
+            {
+                user.PhoneNumber = phoneNumber;
+            }
+        }
+
+        if (address is not null)
+        {
+            user.Address = address;
+        }
+
+        try
+        {
+            await _userManager.UpdateAsync(user);
+            return this.RedirectToReferrer(returnUrl ?? "/");
+        }
+        catch
+        {
+            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+        }
     }
 
     [HttpPost(nameof(Login))]
