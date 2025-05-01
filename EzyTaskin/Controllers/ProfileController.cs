@@ -11,14 +11,17 @@ public class ProfileController : ControllerBase
 {
     private readonly ProfileService _profileService;
     private readonly PaymentService _paymentService;
+    private readonly RequestService _requestService;
 
     public ProfileController(
         ProfileService profileService,
-        PaymentService paymentService
+        PaymentService paymentService,
+        RequestService requestService
     )
     {
         _profileService = profileService;
         _paymentService = paymentService;
+        _requestService = requestService;
     }
 
     [HttpPost(nameof(Provider))]
@@ -85,6 +88,10 @@ public class ProfileController : ControllerBase
             // Populate categories.
             provider.Categories =
                 await _profileService.GetProviderCategories(provider.Id).ToArrayAsync();
+
+            // Populate completed requests.
+            provider.CompletedRequests =
+                await _requestService.GetCompletedRequests(provider.Id).ToArrayAsync();
 
             return Ok(provider);
         }

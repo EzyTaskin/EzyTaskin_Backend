@@ -52,10 +52,27 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         }
     }
 
+    public async IAsyncEnumerable<Data.Model.Request> GetCompletedRequests(Guid providerId)
+    {
+        using var dbContext = DbContext;
+        var query = dbContext.Requests
+            .Include(r => r.Consumer)
+            .Include(r => r.Selected)
+                .ThenInclude(o => o!.Provider)
+            .Where(r => r.Selected != null
+                        && r.Selected.Provider.Id == providerId
+                        && r.CompletedDate != null);
+        await foreach (var dbRequest in query.AsAsyncEnumerable())
+        {
+            yield return ToModel(dbRequest);
+        }
+    }
+
     public async IAsyncEnumerable<Data.Model.Request> FindRequests(
         string? keywords,
         ICollection<Guid>? category,
-        string? location
+        string? location,
+        bool isCompleted
     )
     {
         using var dbContext = DbContext;
@@ -72,8 +89,11 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         // requestCategoriesQuery = requestCategoriesQuery.DistinctBy(rc => rc.Request);
 
         var query = requestCategoriesQuery
-            .Select(rc => rc.Request)
-            .Where(r => r.CompletedDate == null);
+            .Select(rc => rc.Request);
+
+        query = isCompleted ?
+            query.Where(r => r.CompletedDate != null) :
+            query.Where(r => r.CompletedDate == null);
 
         if (location is not null)
         {

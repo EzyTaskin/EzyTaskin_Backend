@@ -142,7 +142,7 @@ public class RequestController : ControllerBase
             return BadRequest();
         }
 
-        return Ok(_requestService.FindRequests(keywords, categoryId, location));
+        return Ok(_requestService.FindRequests(keywords, categoryId, location, isCompleted: false));
     }
 
     [HttpPost(nameof(CompleteRequest))]

@@ -27,4 +27,7 @@ public class Provider
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ICollection<Category>? Categories { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ICollection<Request>? CompletedRequests { get; set; }
 }
