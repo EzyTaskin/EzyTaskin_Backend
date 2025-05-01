@@ -157,9 +157,42 @@ else
 
 app.UseHttpsRedirection();
 
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.ToString().TrimEnd('/');
+    var isApi = path.StartsWith("/api", StringComparison.InvariantCultureIgnoreCase);
+
+    if (!isApi && !path.EndsWith(".html", StringComparison.InvariantCultureIgnoreCase))
+    {
+        var pathHtml = $"{path}.html";
+        var fileInfo = builder.Environment.WebRootFileProvider.GetFileInfo(pathHtml);
+        if (fileInfo.Exists)
+        {
+            context.Request.Path = pathHtml;
+        }
+    }
+    else if (path == string.Empty)
+    {
+        context.Request.Path = "/index.html";
+    }
+
+    if (!isApi)
+    {
+        context.Response.OnStarting(async () =>
+        {
+            if (context.Response.StatusCode == StatusCodes.Status404NotFound)
+            {
+                context.Request.Path = "/404.html";
+                await next(context);
+            }
+        });
+    }
+
+    await next(context);
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
-app.MapFallbackToFile("index.html");
 
 app.UseAuthentication();
 app.UseAuthorization();
