@@ -76,20 +76,20 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
     )
     {
         using var dbContext = DbContext;
-        var requestCategoriesQuery = dbContext.RequestCategories
-            .Include(rc => rc.Category)
-            .Include(rc => rc.Request)
-            .AsQueryable();
+
+        var query = dbContext.Requests.AsQueryable();
+
         if (category is not null && category.Count > 0)
         {
-            requestCategoriesQuery = requestCategoriesQuery
+            var requestCategoriesQuery = dbContext.RequestCategories
+                .Include(rc => rc.Category)
+                .Include(rc => rc.Request)
                 .Where(rc => category.Contains(rc.Category.Id));
-        }
-        // https://github.com/dotnet/efcore/issues/27470
-        // requestCategoriesQuery = requestCategoriesQuery.DistinctBy(rc => rc.Request);
 
-        var query = requestCategoriesQuery
-            .Select(rc => rc.Request);
+            // https://github.com/dotnet/efcore/issues/27470
+            // requestCategoriesQuery = requestCategoriesQuery.DistinctBy(rc => rc.Request);
+            query = requestCategoriesQuery.Select(rc => rc.Request);
+        }
 
         query = isCompleted ?
             query.Where(r => r.CompletedDate != null) :
@@ -100,9 +100,9 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
             query = query.Where(r => r.Location == location);
         }
 
-        // Distinct requests.
-        query = query.GroupBy(r => r.Id)
-            .Select(g => g.First());
+        // Workaround for the DistinctBy issue above.
+        // Must be done AFTER everything else.
+        query = query.GroupBy(r => r.Id).Select(g => g.First());
 
         var keywordSet = keywords?.ToLowerInvariant()?.Split().ToHashSet();
 
