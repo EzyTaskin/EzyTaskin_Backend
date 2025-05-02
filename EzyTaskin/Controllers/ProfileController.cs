@@ -194,7 +194,7 @@ public class ProfileController : ControllerBase
             // TODO: Inspect whether there may be a race condition?
             provider.IsPremium = true;
             provider.IsSubscriptionActive = true;
-            provider.SubscriptionDate = DateTime.Now;
+            provider.SubscriptionDate = DateTime.UtcNow;
 
             var validPaymentMethods =
                 await _paymentService.GetPaymentMethods(accountId)

@@ -1,5 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
 using EzyTaskin.Data;
+using EzyTaskin.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace EzyTaskin.Services;
@@ -12,7 +12,7 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        var dbConsumer = await dbContext.Consumers.SingleAsync(c => c.Id == request.Consumer);
+        var dbConsumer = await dbContext.Consumers.SingleAsync(c => c.Id == request.Consumer.Id);
 
         var dbRequest = (await dbContext.Requests.AddAsync(new()
         {
@@ -27,28 +27,33 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
             CompletedDate = null
         })).Entity;
 
+        dbConsumer.RequestsPosted += 1;
+        dbContext.Consumers.Update(dbConsumer);
+
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return ToModel(dbRequest);
+        return dbRequest.ToModel();
     }
 
     public async Task<Data.Model.Request?> GetRequest(Guid requestId)
     {
         using var dbContext = DbContext;
-        var dbRequest = await dbContext.Requests.SingleOrDefaultAsync(r => r.Id == requestId);
-        return ToModel(dbRequest);
+        var dbRequest = await dbContext.Requests
+            .Saturate()
+            .SingleOrDefaultAsync(r => r.Id == requestId);
+        return dbRequest.ToModel();
     }
 
     public async IAsyncEnumerable<Data.Model.Request> GetRequests(Guid consumerId)
     {
         using var dbContext = DbContext;
         var query = dbContext.Requests
-            .Include(r => r.Consumer)
+            .Saturate()
             .Where(r => r.Consumer.Id == consumerId);
         await foreach (var dbRequest in query.AsAsyncEnumerable())
         {
-            yield return ToModel(dbRequest);
+            yield return dbRequest.ToModel();
         }
     }
 
@@ -56,15 +61,13 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
     {
         using var dbContext = DbContext;
         var query = dbContext.Requests
-            .Include(r => r.Consumer)
-            .Include(r => r.Selected)
-                .ThenInclude(o => o!.Provider)
+            .Saturate()
             .Where(r => r.Selected != null
                         && r.Selected.Provider.Id == providerId
                         && r.CompletedDate != null);
         await foreach (var dbRequest in query.AsAsyncEnumerable())
         {
-            yield return ToModel(dbRequest);
+            yield return dbRequest.ToModel();
         }
     }
 
@@ -78,15 +81,13 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         using var dbContext = DbContext;
 
         var query = dbContext.Requests
-            .Include(r => r.Consumer)
+            .Saturate()
             .AsQueryable();
 
         if (category is not null && category.Count > 0)
         {
             var requestCategoriesQuery = dbContext.RequestCategories
-                .Include(rc => rc.Category)
-                .Include(rc => rc.Request)
-                    .ThenInclude(r => r.Consumer)
+                .Saturate()
                 .Where(rc => category.Contains(rc.Category.Id));
 
             // https://github.com/dotnet/efcore/issues/27470
@@ -125,7 +126,7 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
                 }
             }
 
-            yield return ToModel(dbRequest);
+            yield return dbRequest.ToModel();
         }
     }
 
@@ -134,19 +135,25 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        var dbRequest = await dbContext.Requests.SingleAsync(r => r.Id == requestId);
+        var dbRequest = await dbContext.Requests
+            .Saturate()
+            .SingleAsync(r => r.Id == requestId);
 
         if (dbRequest.CompletedDate != null)
         {
             return null;
         }
 
-        dbRequest.CompletedDate = DateTime.Now;
+        dbRequest.CompletedDate = DateTime.UtcNow;
+        dbContext.Requests.Update(dbRequest);
+
+        dbRequest.Consumer.RequestsCompleted += 1;
+        dbContext.Consumers.Update(dbRequest.Consumer);
 
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return ToModel(dbRequest);
+        return dbRequest.ToModel();
     }
 
     public async IAsyncEnumerable<Data.Model.Category> SetRequestCategories(
@@ -182,7 +189,7 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
                 Category = dbCategory
             });
 
-            yield return ToModel(dbCategory);
+            yield return dbCategory.ToModel();
         }
 
         await dbContext.SaveChangesAsync();
@@ -200,7 +207,7 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
             .Where(pc => pc.Request.Id == requestId);
         await foreach (var dbRequestCategory in query.AsAsyncEnumerable())
         {
-            yield return ToModel(dbRequestCategory.Category);
+            yield return dbRequestCategory.Category.ToModel();
         }
     }
 
@@ -221,87 +228,52 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return ToModel(dbOffer);
+        return dbOffer.ToModel();
     }
 
     public async Task<Data.Model.Offer?> GetOffer(Guid offerId)
     {
         using var dbContext = DbContext;
-        var dbOffer = await dbContext.Offers.SingleOrDefaultAsync(o => o.Id == offerId);
-        return ToModel(dbOffer);
+        var dbOffer = await dbContext.Offers
+            .Saturate()
+            .SingleOrDefaultAsync(o => o.Id == offerId);
+        return dbOffer.ToModel();
     }
 
     public async IAsyncEnumerable<Data.Model.Offer> GetOffers(Guid requestId)
     {
         using var dbContext = DbContext;
         var query = dbContext.Offers
-            .Include(o => o.Request)
-            .Include(o => o.Provider)
+            .Saturate()
             .Where(o => o.Request.Id == requestId);
         await foreach (var dbOffer in query.AsAsyncEnumerable())
         {
-            yield return ToModel(dbOffer);
+            yield return dbOffer.ToModel();
         }
     }
 
-    public async Task<Data.Model.Offer> SelectOffer(Guid offerId)
+    public async Task<Data.Model.Offer?> SelectOffer(Guid offerId)
     {
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var dbOffer = await dbContext.Offers
-            .Include(o => o.Request)
+            .Saturate()
             .SingleAsync(o => o.Id == offerId);
 
         var dbRequest = dbOffer.Request;
+        if (dbRequest.CompletedDate != null)
+        {
+            return null;
+        }
+
         dbRequest.Selected = dbOffer;
 
-        dbContext.Update(dbRequest);
+        dbContext.Requests.Update(dbRequest);
 
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return ToModel(dbOffer);
-    }
-
-    [return: NotNullIfNotNull(nameof(dbRequest))]
-    private static Data.Model.Request? ToModel(Data.Db.Request? dbRequest)
-    {
-        return dbRequest == null ? null : new()
-        {
-            Id = dbRequest.Id,
-            Consumer = dbRequest.Consumer.Id,
-            Selected = ToModel(dbRequest.Selected),
-            Title = dbRequest.Title,
-            Description = dbRequest.Description,
-            Location = dbRequest.Location,
-            Budget = dbRequest.Budget,
-            DueDate = dbRequest.DueDate,
-            RemoteEligible = dbRequest.RemoteEligible,
-            CompletedDate = dbRequest.CompletedDate,
-            Offers = null
-        };
-    }
-
-    [return: NotNullIfNotNull(nameof(dbOffer))]
-    private static Data.Model.Offer? ToModel(Data.Db.Offer? dbOffer)
-    {
-        return dbOffer == null ? null : new()
-        {
-            Id = dbOffer.Id,
-            Provider = dbOffer.Provider.Id,
-            Request = dbOffer.Request.Id,
-            Price = dbOffer.Price
-        };
-    }
-
-    [return: NotNullIfNotNull(nameof(dbCategory))]
-    private static Data.Model.Category? ToModel(Data.Db.Category? dbCategory)
-    {
-        return dbCategory == null ? null : new()
-        {
-            Id = dbCategory.Id,
-            Name = dbCategory.Name
-        };
+        return dbOffer.ToModel();
     }
 }

@@ -54,7 +54,7 @@ public class ReviewController : ControllerBase
 
             var request = await _requestService.GetRequest(requestId);
             if (request is null
-                || request.Consumer != consumer.Id
+                || request.Consumer.Id != consumer.Id
                 || request.CompletedDate == null)
             {
                 return this.RedirectWithError(error: ErrorStrings.InvalidRequest);

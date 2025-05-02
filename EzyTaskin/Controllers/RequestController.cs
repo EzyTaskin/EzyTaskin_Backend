@@ -59,7 +59,7 @@ public class RequestController : ControllerBase
 
             var request = await _requestService.CreateRequest(new()
             {
-                Consumer = consumer.Id,
+                Consumer = new() { Id = consumer.Id },
                 Title = title,
                 Description = description,
                 Location = location,
@@ -187,9 +187,9 @@ public class RequestController : ControllerBase
             var providerPaymentMethod = await _paymentService.GetPaymentMethods(accountId)
                 .FirstOrDefaultAsync();
 
-            var consumer = (await _profileService.GetConsumer(request.Consumer))!;
-            var consumerPaymentMethod = await _paymentService.GetPaymentMethods(consumer.Account)
-                .FirstOrDefaultAsync();
+            var consumerPaymentMethod =
+                await _paymentService.GetPaymentMethods(request.Consumer.Account)
+                    .FirstOrDefaultAsync();
 
             if (providerPaymentMethod is null || consumerPaymentMethod is null)
             {
@@ -309,9 +309,14 @@ public class RequestController : ControllerBase
             }
 
             var request = await _requestService.GetRequest(requestId);
-            if (request is null || request.Consumer != consumer.Id)
+            if (request is null || request.Consumer.Id != consumer.Id)
             {
                 return this.RedirectWithError(error: ErrorStrings.InvalidRequest);
+            }
+
+            if (request.CompletedDate != null)
+            {
+                return this.RedirectWithError(error: ErrorStrings.RequestAlreadyComplete);
             }
 
             var offer = await _requestService.GetOffer(offerId);

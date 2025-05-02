@@ -6,7 +6,7 @@ public class Request
 {
     public Guid Id { get; set; }
 
-    public required Guid Consumer { get; set; }
+    public required Consumer Consumer { get; set; }
 
     public Offer? Selected { get; set; }
 
