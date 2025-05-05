@@ -23,6 +23,7 @@ public static class ModelExtensions
         {
             Id = dbConsumer.Id,
             Account = Guid.Parse(dbConsumer.Account.Id),
+            Name = dbConsumer.Account.FullName,
             RequestsPosted = dbConsumer.RequestsPosted,
             RequestsCompleted = dbConsumer.RequestsCompleted
         };
