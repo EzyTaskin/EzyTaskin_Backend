@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
 namespace EzyTaskin.Utils;
 
@@ -11,7 +12,7 @@ public static class ModelExtensions
         return dbCategory == null ? null : new()
         {
             Id = dbCategory.Id,
-            Name = dbCategory.Name
+            Name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(dbCategory.Name)
         };
     }
 

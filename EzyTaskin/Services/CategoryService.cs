@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using EzyTaskin.Data;
+using EzyTaskin.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace EzyTaskin.Services;
@@ -14,7 +15,7 @@ public class CategoryService(DbContextOptions<ApplicationDbContext> dbContextOpt
         var query = dbContext.Categories;
         await foreach (var dbCategory in query.AsAsyncEnumerable())
         {
-            yield return ToModel(dbCategory);
+            yield return dbCategory.ToModel();
         }
     }
 
@@ -30,7 +31,7 @@ public class CategoryService(DbContextOptions<ApplicationDbContext> dbContextOpt
         foreach (var dbCategory in existing)
         {
             nameSet.Remove(dbCategory.Name);
-            yield return ToModel(dbCategory);
+            yield return dbCategory.ToModel();
         }
 
         // Create remaining categories
@@ -50,17 +51,7 @@ public class CategoryService(DbContextOptions<ApplicationDbContext> dbContextOpt
         // The new objects have been commited, safe to return them now.
         foreach (var dbCategory in @new)
         {
-            yield return ToModel(dbCategory);
+            yield return dbCategory.ToModel();
         }
-    }
-
-    [return: NotNullIfNotNull(nameof(dbCategory))]
-    private static Data.Model.Category? ToModel(Data.Db.Category? dbCategory)
-    {
-        return dbCategory == null ? null : new()
-        {
-            Id = dbCategory.Id,
-            Name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(dbCategory.Name)
-        };
     }
 }
