@@ -66,22 +66,14 @@ public class RequestController : ControllerBase
                 RemoteEligible = remoteEligible,
             });
 
-            List<Category>? newCategories = null;
-
             if (category is not null)
             {
                 var categoryIds = await _categoryService.GetCategoriesFor(category)
                     .Select(c => c.Id)
                     .ToListAsync();
-                newCategories = await _requestService
+                request.Categories = await _requestService
                     .SetRequestCategories(request.Id, categoryIds)
                     .ToListAsync();
-            }
-
-            request = await _requestService.GetRequest(request.Id);
-            if (request is not null)
-            {
-                request.Categories ??= newCategories;
             }
 
             return Ok(request);
