@@ -13,16 +13,19 @@ public class ProfileController : ControllerBase
     private readonly ProfileService _profileService;
     private readonly PaymentService _paymentService;
     private readonly RequestService _requestService;
+    private readonly CategoryService _categoryService;
 
     public ProfileController(
         ProfileService profileService,
         PaymentService paymentService,
-        RequestService requestService
+        RequestService requestService,
+        CategoryService categoryService
     )
     {
         _profileService = profileService;
         _paymentService = paymentService;
         _requestService = requestService;
+        _categoryService = categoryService;
     }
 
     [HttpPost(nameof(Provider))]
@@ -93,7 +96,7 @@ public class ProfileController : ControllerBase
     [Authorize]
     public async Task<ActionResult> UpdateProvider(
         [FromForm] string? description,
-        [FromForm] ICollection<Guid>? categoryId
+        [FromForm] ICollection<string>? category
     )
     {
         if (!ModelState.IsValid)
@@ -115,29 +118,26 @@ public class ProfileController : ControllerBase
                 return Unauthorized();
             }
 
-            if (categoryId is not null)
-            {
-                if (categoryId.Count == 0
-                    || categoryId.Count == 1 && categoryId.Single() == Guid.Empty)
-                {
-                    await _profileService.SetProviderCategories(provider.Id, [])
-                        .ToListAsync();
-                }
-                else
-                {
-                    var succeed =
-                        await _profileService.SetProviderCategories(provider.Id, categoryId)
-                            .AnyAsync();
+            List<Category>? newCategories = null;
 
-                    if (!succeed)
-                    {
-                        return BadRequest();
-                    }
-                }
+            if (category is not null)
+            {
+                var categoryIds = await _categoryService.GetCategoriesFor(category)
+                    .Select(c => c.Id)
+                    .ToListAsync();
+                newCategories = await _profileService
+                    .SetProviderCategories(provider.Id, categoryIds)
+                    .ToListAsync();
             }
 
             provider.Description = description;
             provider = await _profileService.UpdateProvider(provider);
+
+            if (provider is not null)
+            {
+                provider.Categories ??= newCategories;
+            }
+
             return Ok(provider);
         }
         catch

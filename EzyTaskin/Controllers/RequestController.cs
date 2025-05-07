@@ -14,16 +14,19 @@ public class RequestController : ControllerBase
     private readonly RequestService _requestService;
     private readonly PaymentService _paymentService;
     private readonly ProfileService _profileService;
+    private readonly CategoryService _categoryService;
 
     public RequestController(
         RequestService requestService,
         PaymentService paymentService,
-        ProfileService profileService
+        ProfileService profileService,
+        CategoryService categoryService
     )
     {
         _requestService = requestService;
         _paymentService = paymentService;
         _profileService = profileService;
+        _categoryService = categoryService;
     }
 
     [HttpPost]
@@ -35,7 +38,7 @@ public class RequestController : ControllerBase
         [FromForm, Required] decimal budget,
         [FromForm] DateTime? dueDate,
         [FromForm, Required] bool remoteEligible,
-        [FromForm] ICollection<Guid>? categoryId
+        [FromForm] ICollection<string>? category
     )
     {
         var accountId = this.TryGetAccountId();
@@ -63,13 +66,25 @@ public class RequestController : ControllerBase
                 RemoteEligible = remoteEligible,
             });
 
-            if (categoryId is not null)
+            List<Category>? newCategories = null;
+
+            if (category is not null)
             {
-                await _requestService.SetRequestCategories(request.Id, categoryId)
+                var categoryIds = await _categoryService.GetCategoriesFor(category)
+                    .Select(c => c.Id)
+                    .ToListAsync();
+                newCategories = await _requestService
+                    .SetRequestCategories(request.Id, categoryIds)
                     .ToListAsync();
             }
 
-            return Ok(await _requestService.GetRequest(request.Id));
+            request = await _requestService.GetRequest(request.Id);
+            if (request is not null)
+            {
+                request.Categories ??= newCategories;
+            }
+
+            return Ok(request);
         }
         catch
         {
