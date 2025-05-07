@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using EzyTaskin.Data;
+using EzyTaskin.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace EzyTaskin.Services;
@@ -28,7 +29,7 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return ToModel(dbProvider);
+        return dbProvider.ToModel();
     }
 
     public async Task<Data.Model.Provider?> GetProvider(Guid accountId)
@@ -39,7 +40,7 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
             .Include(p => p.Account)
             .SingleOrDefaultAsync(p => p.Account.Id == $"{accountId}");
 
-        return ToModel(dbProvider);
+        return dbProvider.ToModel();
     }
 
     public async Task<Data.Model.Provider?> UpdateProvider(Data.Model.Provider provider)
@@ -64,7 +65,7 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return ToModel(dbProvider);
+        return dbProvider.ToModel();
     }
 
     public async IAsyncEnumerable<Data.Model.Category> SetProviderCategories(
@@ -100,7 +101,7 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
                 Category = dbCategory
             });
 
-            yield return ToModel(dbCategory);
+            yield return dbCategory.ToModel();
         }
 
         await dbContext.SaveChangesAsync();
@@ -118,7 +119,7 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
             .Where(pc => pc.Provider.Id == providerId);
         await foreach (var dbProviderCategory in query.AsAsyncEnumerable())
         {
-            yield return ToModel(dbProviderCategory.Category);
+            yield return dbProviderCategory.Category.ToModel();
         }
     }
 
@@ -139,7 +140,7 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return ToModel(dbConsumer);
+        return dbConsumer.ToModel();
     }
 
     public async Task<Data.Model.Consumer?> GetConsumer(Guid accountId)
@@ -150,43 +151,6 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
             .Include(c => c.Account)
             .SingleOrDefaultAsync(p => p.Account.Id == $"{accountId}");
 
-        return ToModel(dbConsumer);
-    }
-
-    [return: NotNullIfNotNull(nameof(dbProvider))]
-    private static Data.Model.Provider? ToModel(Data.Db.Provider? dbProvider)
-    {
-        return dbProvider == null ? null : new()
-        {
-            Id = dbProvider.Id,
-            Account = Guid.Parse(dbProvider.Account.Id),
-            Description = dbProvider.Description,
-            TotalRating = dbProvider.TotalRating,
-            IsPremium = dbProvider.IsPremium,
-            IsSubscriptionActive = dbProvider.IsSubscriptionActive,
-            SubscriptionDate = dbProvider.SubscriptionDate
-        };
-    }
-
-    [return: NotNullIfNotNull(nameof(dbConsumer))]
-    private static Data.Model.Consumer? ToModel(Data.Db.Consumer? dbConsumer)
-    {
-        return dbConsumer == null ? null : new()
-        {
-            Id = dbConsumer.Id,
-            Account = Guid.Parse(dbConsumer.Account.Id),
-            RequestsPosted = dbConsumer.RequestsPosted,
-            RequestsCompleted = dbConsumer.RequestsCompleted
-        };
-    }
-
-    [return: NotNullIfNotNull(nameof(dbCategory))]
-    private static Data.Model.Category? ToModel(Data.Db.Category? dbCategory)
-    {
-        return dbCategory == null ? null : new()
-        {
-            Id = dbCategory.Id,
-            Name = dbCategory.Name
-        };
+        return dbConsumer.ToModel();
     }
 }

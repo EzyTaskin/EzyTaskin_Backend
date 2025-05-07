@@ -60,4 +60,19 @@ public static class ModelExtensions
             Price = dbOffer.Price
         };
     }
+
+    [return: NotNullIfNotNull(nameof(dbProvider))]
+    public static Data.Model.Provider? ToModel(this Data.Db.Provider? dbProvider)
+    {
+        return dbProvider == null ? null : new()
+        {
+            Id = dbProvider.Id,
+            Account = Guid.Parse(dbProvider.Account.Id),
+            Description = dbProvider.Description,
+            TotalRating = dbProvider.TotalRating,
+            IsPremium = dbProvider.IsPremium,
+            IsSubscriptionActive = dbProvider.IsSubscriptionActive,
+            SubscriptionDate = dbProvider.SubscriptionDate
+        };
+    }
 }
