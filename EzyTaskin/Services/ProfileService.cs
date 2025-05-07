@@ -47,7 +47,9 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        var dbProvider = await dbContext.Providers.SingleAsync(p => p.Id == provider.Id);
+        var dbProvider = await dbContext.Providers
+            .Include(p => p.Account)
+            .SingleAsync(p => p.Id == provider.Id);
         dbProvider.Description = provider.Description;
         dbProvider.IsPremium = provider.IsPremium;
         dbProvider.IsSubscriptionActive = provider.IsSubscriptionActive;
