@@ -12,7 +12,9 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        var dbConsumer = await dbContext.Consumers.SingleAsync(c => c.Id == request.Consumer.Id);
+        var dbConsumer = await dbContext.Consumers
+            .Include(c => c.Account)
+            .SingleAsync(c => c.Id == request.Consumer.Id);
 
         var dbRequest = (await dbContext.Requests.AddAsync(new()
         {
