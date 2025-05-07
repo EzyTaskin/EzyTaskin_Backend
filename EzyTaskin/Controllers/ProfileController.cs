@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EzyTaskin.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 public class ProfileController : ControllerBase
 {
     private readonly ProfileService _profileService;
@@ -26,29 +27,21 @@ public class ProfileController : ControllerBase
 
     [HttpPost(nameof(Provider))]
     [Authorize]
-    public async Task<ActionResult> CreateProvider(
-        [FromQuery] string? returnUrl
-    )
+    public async Task<ActionResult<Provider>> CreateProvider()
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
         {
-            await _profileService.CreateProvider(accountId);
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            return Ok(await _profileService.CreateProvider(accountId));
         }
         catch
         {
-            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
@@ -58,15 +51,10 @@ public class ProfileController : ControllerBase
         [FromQuery] Guid? accountId
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         accountId ??= this.TryGetAccountId();
         if (accountId.Value == Guid.Empty)
         {
-            return BadRequest();
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
@@ -97,7 +85,7 @@ public class ProfileController : ControllerBase
         }
         catch
         {
-            return BadRequest();
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
@@ -161,19 +149,13 @@ public class ProfileController : ControllerBase
     [HttpPost($"{nameof(Provider)}/{nameof(ActivatePremium)}")]
     [Authorize]
     public async Task<ActionResult> ActivatePremium(
-        [FromQuery] string? returnUrl,
         [FromForm] Guid? paymentMethod
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(ErrorStrings.SessionExpired);
+            return BadRequest(ErrorStrings.SessionExpired);
         }
 
         try
@@ -181,12 +163,12 @@ public class ProfileController : ControllerBase
             var provider = await _profileService.GetProvider(accountId);
             if (provider is null)
             {
-                return this.RedirectWithError(ErrorStrings.NotAProvider);
+                return Unauthorized(ErrorStrings.NotAProvider);
             }
 
             if (provider.IsSubscriptionActive)
             {
-                return this.RedirectWithError(ErrorStrings.PremiumAlreadyActive);
+                return BadRequest(ErrorStrings.PremiumAlreadyActive);
             }
 
             // TODO: Inspect whether there may be a race condition?
@@ -203,21 +185,14 @@ public class ProfileController : ControllerBase
             {
                 if (!validPaymentMethods.Contains(paymentMethod.Value))
                 {
-                    return this.RedirectWithError(ErrorStrings.InvalidPaymentMethod);
+                    return BadRequest(error: ErrorStrings.InvalidPaymentMethod);
                 }
             }
             else
             {
                 if (!validPaymentMethods.Any())
                 {
-                    var referrer = Request.GetTypedHeaders().Referer?.ToString() ?? returnUrl;
-                    // TODO: Ask the frontend team where this endpoint is.
-                    return this.RedirectToReferrerWithQuery("/Payment",
-                        new Dictionary<string, object?>()
-                        {
-                            { "returnUrl", referrer }
-                        }
-                    );
+                    return BadRequest(error: ErrorStrings.NoPaymentMethod);
                 }
                 paymentMethod = validPaymentMethods.First();
             }
@@ -225,31 +200,23 @@ public class ProfileController : ControllerBase
             // TODO: Debit amount?
             await _paymentService.Debit(paymentMethod.Value, 0.0m);
 
-            await _profileService.UpdateProvider(provider);
-
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            provider = await _profileService.UpdateProvider(provider);
+            return Ok(provider);
         }
         catch
         {
-            return this.RedirectWithError(ErrorStrings.ErrorTryAgain);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
     [HttpPost($"{nameof(Provider)}/{nameof(DeactivatePremium)}")]
     [Authorize]
-    public async Task<ActionResult> DeactivatePremium(
-        [FromQuery] string? returnUrl
-    )
+    public async Task<ActionResult> DeactivatePremium()
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(ErrorStrings.SessionExpired);
+            return BadRequest(ErrorStrings.SessionExpired);
         }
 
         try
@@ -257,50 +224,43 @@ public class ProfileController : ControllerBase
             var provider = await _profileService.GetProvider(accountId);
             if (provider is null)
             {
-                return this.RedirectWithError(ErrorStrings.NotAProvider);
+                return Unauthorized(ErrorStrings.NotAProvider);
             }
 
             if (!provider.IsSubscriptionActive)
             {
-                return this.RedirectWithError(ErrorStrings.PremiumNotActive);
+                return BadRequest(ErrorStrings.PremiumNotActive);
             }
 
             provider.IsSubscriptionActive = false;
-            await _profileService.UpdateProvider(provider);
+            provider = await _profileService.UpdateProvider(provider);
 
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            return Ok(provider);
         }
         catch
         {
-            return this.RedirectWithError(ErrorStrings.ErrorTryAgain);
+            return BadRequest(ErrorStrings.ErrorTryAgain);
         }
     }
 
     [HttpPost(nameof(Consumer))]
     [Authorize]
-    public async Task<ActionResult> CreateConsumer(
-        [FromQuery] string? returnUrl
-    )
+    public async Task<ActionResult> CreateConsumer()
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
         {
-            await _profileService.CreateConsumer(accountId);
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            var consumer = await _profileService.CreateConsumer(accountId);
+            return Ok(consumer);
         }
         catch
         {
-            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
@@ -310,15 +270,10 @@ public class ProfileController : ControllerBase
         [FromQuery] Guid? accountId
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         accountId ??= this.TryGetAccountId();
         if (accountId.Value == Guid.Empty)
         {
-            return BadRequest();
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
@@ -332,7 +287,7 @@ public class ProfileController : ControllerBase
         }
         catch
         {
-            return BadRequest();
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 }
