@@ -64,20 +64,24 @@ public class AccountController : ControllerBase
     public async Task<ActionResult> UpdateAccount(
         [FromForm] string? fullName,
         [FromForm] string? phoneNumber,
-        [FromForm] string? address,
-        [FromQuery] string? returnUrl
+        [FromForm] string? address
     )
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest();
+        }
+
         var userId = this.TryGetAccountId();
         if (userId == Guid.Empty)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         var user = await _userManager.FindByIdAsync($"{userId}");
         if (user is null)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         if (fullName is not null)
@@ -107,11 +111,11 @@ public class AccountController : ControllerBase
         try
         {
             await _userManager.UpdateAsync(user);
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            return Ok();
         }
         catch
         {
-            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
