@@ -105,8 +105,7 @@ public class ProfileController : ControllerBase
     [Authorize]
     public async Task<ActionResult> UpdateProvider(
         [FromForm] string? description,
-        [FromForm] ICollection<Guid>? categoryId,
-        [FromQuery] string? returnUrl
+        [FromForm] ICollection<Guid>? categoryId
     )
     {
         if (!ModelState.IsValid)
@@ -117,7 +116,7 @@ public class ProfileController : ControllerBase
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(ErrorStrings.SessionExpired);
+            return BadRequest();
         }
 
         try
@@ -125,7 +124,7 @@ public class ProfileController : ControllerBase
             var provider = await _profileService.GetProvider(accountId);
             if (provider is null)
             {
-                return this.RedirectWithError(ErrorStrings.NotAProvider);
+                return Unauthorized();
             }
 
             if (categoryId is not null)
@@ -144,19 +143,18 @@ public class ProfileController : ControllerBase
 
                     if (!succeed)
                     {
-                        return this.RedirectWithError(ErrorStrings.InvalidCategory);
+                        return BadRequest();
                     }
                 }
             }
 
             provider.Description = description;
-            await _profileService.UpdateProvider(provider);
-
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            provider = await _profileService.UpdateProvider(provider);
+            return Ok(provider);
         }
         catch
         {
-            return this.RedirectWithError(ErrorStrings.ErrorTryAgain);
+            return BadRequest();
         }
     }
 
