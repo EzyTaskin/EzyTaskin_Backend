@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EzyTaskin.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 public class RequestController : ControllerBase
 {
     private readonly RequestService _requestService;
@@ -34,19 +35,13 @@ public class RequestController : ControllerBase
         [FromForm, Required] decimal budget,
         [FromForm] DateTime? dueDate,
         [FromForm, Required] bool remoteEligible,
-        [FromForm] ICollection<Guid>? categoryId,
-        [FromQuery] string? returnUrl
+        [FromForm] ICollection<Guid>? categoryId
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return this.RedirectWithError();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
@@ -54,7 +49,7 @@ public class RequestController : ControllerBase
             var consumer = await _profileService.GetConsumer(accountId);
             if (consumer is null)
             {
-                return this.RedirectWithError(error: ErrorStrings.NotAConsumer);
+                return Unauthorized(ErrorStrings.NotAConsumer);
             }
 
             var request = await _requestService.CreateRequest(new()
@@ -74,11 +69,11 @@ public class RequestController : ControllerBase
                     .ToListAsync();
             }
 
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            return Ok(await _requestService.GetRequest(request.Id));
         }
         catch
         {
-            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
@@ -88,11 +83,6 @@ public class RequestController : ControllerBase
         [FromQuery] Guid? requestId
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         try
         {
             if (requestId.HasValue)
@@ -113,19 +103,19 @@ public class RequestController : ControllerBase
                 var accountId = this.TryGetAccountId();
                 if (accountId == Guid.Empty)
                 {
-                    return BadRequest();
+                    return BadRequest(ErrorStrings.SessionExpired);
                 }
                 var consumer = await _profileService.GetConsumer(accountId);
                 if (consumer is null)
                 {
-                    return BadRequest();
+                    return Unauthorized(ErrorStrings.NotAConsumer);
                 }
                 return Ok(_requestService.GetRequests(consumer.Id));
             }
         }
         catch
         {
-            return BadRequest();
+            return BadRequest(ErrorStrings.ErrorTryAgain);
         }
     }
 
@@ -137,30 +127,19 @@ public class RequestController : ControllerBase
         [FromQuery] string? location
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         return Ok(_requestService.FindRequests(keywords, categoryId, location, isCompleted: false));
     }
 
     [HttpPost(nameof(CompleteRequest))]
     [Authorize]
     public async Task<ActionResult> CompleteRequest(
-        [FromForm, Required] Guid requestId,
-        [FromQuery] string? returnUrl
+        [FromForm, Required] Guid requestId
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return this.RedirectWithError();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
@@ -168,7 +147,7 @@ public class RequestController : ControllerBase
             var provider = await _profileService.GetProvider(accountId);
             if (provider is null)
             {
-                return this.RedirectWithError(error: ErrorStrings.NotAProvider);
+                return Unauthorized(ErrorStrings.NotAProvider);
             }
 
             var request = await _requestService.GetRequest(requestId);
@@ -176,12 +155,12 @@ public class RequestController : ControllerBase
                 || request.Selected is null
                 || request.Selected?.Provider != provider.Id)
             {
-                return this.RedirectWithError(error: ErrorStrings.InvalidRequest);
+                return BadRequest(error: ErrorStrings.InvalidRequest);
             }
 
             if (request.CompletedDate != null)
             {
-                return this.RedirectWithError(error: ErrorStrings.RequestAlreadyComplete);
+                return BadRequest(error: ErrorStrings.RequestAlreadyComplete);
             }
 
             var providerPaymentMethod = await _paymentService.GetPaymentMethods(accountId)
@@ -193,13 +172,13 @@ public class RequestController : ControllerBase
 
             if (providerPaymentMethod is null || consumerPaymentMethod is null)
             {
-                return this.RedirectWithError(error: ErrorStrings.NoPaymentMethod);
+                return BadRequest(error: ErrorStrings.NoPaymentMethod);
             }
 
             var completedRequest = await _requestService.CompleteRequest(requestId);
             if (completedRequest is null)
             {
-                return this.RedirectWithError(error: ErrorStrings.RequestAlreadyComplete);
+                return BadRequest(error: ErrorStrings.RequestAlreadyComplete);
             }
 
             var price = request.Selected.Price ?? request.Budget;
@@ -211,11 +190,11 @@ public class RequestController : ControllerBase
                 amount: price
             );
 
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            return Ok(await _requestService.GetRequest(requestId));
         }
         catch
         {
-            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
@@ -223,19 +202,13 @@ public class RequestController : ControllerBase
     [Authorize]
     public async Task<ActionResult> CreateOffer(
         [FromForm, Required] Guid requestId,
-        [FromForm] decimal? price,
-        [FromQuery] string? returnUrl
+        [FromForm] decimal? price
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return this.RedirectWithError();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
@@ -243,7 +216,7 @@ public class RequestController : ControllerBase
             var provider = await _profileService.GetProvider(accountId);
             if (provider is null)
             {
-                return this.RedirectWithError(error: ErrorStrings.NotAProvider);
+                return Unauthorized(ErrorStrings.NotAProvider);
             }
 
             if (price.HasValue)
@@ -251,33 +224,33 @@ public class RequestController : ControllerBase
                 // TODO: Check if premium state is updated?
                 if (!provider.IsPremium)
                 {
-                    return this.RedirectWithError(error: ErrorStrings.PremiumRequired);
+                    return Unauthorized(ErrorStrings.PremiumRequired);
                 }
 
                 var request = await _requestService.GetRequest(requestId);
                 if (request is null)
                 {
-                    return this.RedirectWithError(error: ErrorStrings.InvalidRequest);
+                    return BadRequest(error: ErrorStrings.InvalidRequest);
                 }
 
                 if (price.Value > request.Budget)
                 {
-                    return this.RedirectWithError(error: ErrorStrings.OfferPriceExceedsBudget);
+                    return BadRequest(error: ErrorStrings.OfferPriceExceedsBudget);
                 }
             }
 
-            await _requestService.CreateOffer(new()
+            var offer = await _requestService.CreateOffer(new()
             {
                 Provider = provider.Id,
                 Request = requestId,
                 Price = price
             });
 
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            return Ok(offer);
         }
         catch
         {
-            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
@@ -285,19 +258,13 @@ public class RequestController : ControllerBase
     [Authorize]
     public async Task<ActionResult> SelectOffer(
         [FromForm, Required] Guid requestId,
-        [FromForm, Required] Guid offerId,
-        [FromQuery] string? returnUrl
+        [FromForm, Required] Guid offerId
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return this.RedirectWithError();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
@@ -305,32 +272,33 @@ public class RequestController : ControllerBase
             var consumer = await _profileService.GetConsumer(accountId);
             if (consumer is null)
             {
-                return this.RedirectWithError(error: ErrorStrings.NotAConsumer);
+                return Unauthorized(ErrorStrings.NotAConsumer);
             }
 
             var request = await _requestService.GetRequest(requestId);
             if (request is null || request.Consumer.Id != consumer.Id)
             {
-                return this.RedirectWithError(error: ErrorStrings.InvalidRequest);
+                return BadRequest(error: ErrorStrings.InvalidRequest);
             }
 
             if (request.CompletedDate != null)
             {
-                return this.RedirectWithError(error: ErrorStrings.RequestAlreadyComplete);
+                return BadRequest(error: ErrorStrings.RequestAlreadyComplete);
             }
 
             var offer = await _requestService.GetOffer(offerId);
             if (offer is null || offer.Request != requestId)
             {
-                return this.RedirectWithError(error: ErrorStrings.InvalidOffer);
+                return BadRequest(error: ErrorStrings.InvalidOffer);
             }
 
             await _requestService.SelectOffer(offerId);
-            return this.RedirectToReferrer(returnUrl ?? "/");
+
+            return Ok(await _requestService.GetRequest(request.Id));
         }
         catch
         {
-            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 }

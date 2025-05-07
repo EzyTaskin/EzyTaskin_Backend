@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EzyTaskin.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 public class CategoryController : ControllerBase
 {
     private readonly CategoryService _categoryService;

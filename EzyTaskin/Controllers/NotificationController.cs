@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EzyTaskin.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 public class NotificationController : ControllerBase
 {
     private readonly NotificationService _notificationService;

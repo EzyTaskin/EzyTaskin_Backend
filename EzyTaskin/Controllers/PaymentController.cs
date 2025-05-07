@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EzyTaskin.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 public class PaymentController : ControllerBase
 {
     private readonly PaymentService _paymentService;
@@ -21,15 +22,10 @@ public class PaymentController : ControllerBase
     [Authorize]
     public ActionResult<IAsyncEnumerable<PaymentMethod>> GetPaymentMethods()
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return BadRequest();
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         return Ok(_paymentService.GetPaymentMethods(accountId));
@@ -44,29 +40,22 @@ public class PaymentController : ControllerBase
         string expiry,
         [FromForm, Required, RegularExpression(@"\d\d\d", ErrorMessage = "Invalid CVV.")]
         string cvv,
-        [FromForm, Required] string name,
-        [FromQuery] string? returnUrl
+        [FromForm, Required] string name
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return this.RedirectWithError(includeForm: false);
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired, includeForm: false);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
         {
-            await _paymentService.AddCard(accountId, number, expiry, cvv, name);
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            return Ok(await _paymentService.AddCard(accountId, number, expiry, cvv, name));
         }
         catch
         {
-            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain, includeForm: false);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 }

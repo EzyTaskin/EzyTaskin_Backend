@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EzyTaskin.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 public class ReviewController : ControllerBase
 {
     private readonly ReviewService _reviewService;
@@ -29,19 +30,13 @@ public class ReviewController : ControllerBase
     public async Task<ActionResult> AddReview(
         [FromForm, Required] Guid requestId,
         [FromForm, Required, Range(1, 5, ErrorMessage = "Invalid rating.")] int rating,
-        [FromForm] string? description,
-        [FromQuery] string? returnUrl
+        [FromForm] string? description
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return this.RedirectWithError();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return this.RedirectWithError(error: ErrorStrings.SessionExpired);
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
@@ -49,7 +44,7 @@ public class ReviewController : ControllerBase
             var consumer = await _profileService.GetConsumer(accountId);
             if (consumer is null)
             {
-                return this.RedirectWithError(error: ErrorStrings.NotAConsumer);
+                return Unauthorized(ErrorStrings.NotAConsumer);
             }
 
             var request = await _requestService.GetRequest(requestId);
@@ -57,21 +52,21 @@ public class ReviewController : ControllerBase
                 || request.Consumer.Id != consumer.Id
                 || request.CompletedDate == null)
             {
-                return this.RedirectWithError(error: ErrorStrings.InvalidRequest);
+                return BadRequest(error: ErrorStrings.InvalidRequest);
             }
 
-            await _reviewService.AddReview(new()
+            var review = await _reviewService.AddReview(new()
             {
                 Request = requestId,
                 Rating = rating,
                 Description = description
             });
 
-            return this.RedirectToReferrer(returnUrl ?? "/");
+            return Ok(review);
         }
         catch
         {
-            return this.RedirectWithError(error: ErrorStrings.ErrorTryAgain);
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
@@ -81,11 +76,6 @@ public class ReviewController : ControllerBase
         [FromQuery] Guid? providerId
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         if (requestId.HasValue && providerId.HasValue)
         {
             return BadRequest();
