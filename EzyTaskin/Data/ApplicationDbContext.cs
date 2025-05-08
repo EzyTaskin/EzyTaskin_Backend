@@ -55,7 +55,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Offer>(b =>
         {
             b.HasOne(e => e.Provider).WithMany();
-            b.HasOne(e => e.Request).WithMany();
+            b.HasOne(e => e.Request).WithMany(r => r.Offers);
         });
 
         builder.Entity<ProviderCategory>(b =>
@@ -79,8 +79,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Request>(b =>
         {
             b.HasOne(e => e.Consumer).WithMany();
-            b.HasOne(e => e.Selected).WithOne()
-                .HasForeignKey<Request>($"{nameof(Offer)}Id");
         });
 
         builder.Entity<Review>(b =>

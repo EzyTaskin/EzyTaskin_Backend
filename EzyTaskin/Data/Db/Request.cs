@@ -31,4 +31,6 @@ public class Request
     public required bool RemoteEligible { get; set; }
 
     public DateTime? CompletedDate { get; set; }
+
+    public ICollection<Offer> Offers { get; set; } = [];
 }
