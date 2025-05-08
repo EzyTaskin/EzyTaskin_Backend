@@ -70,6 +70,7 @@ public static class ModelExtensions
             Account = Guid.Parse(dbProvider.Account.Id),
             Description = dbProvider.Description,
             TotalRating = dbProvider.TotalRating,
+            ReviewCount = dbProvider.ReviewCount,
             IsPremium = dbProvider.IsPremium,
             IsSubscriptionActive = dbProvider.IsSubscriptionActive,
             SubscriptionDate = dbProvider.SubscriptionDate
