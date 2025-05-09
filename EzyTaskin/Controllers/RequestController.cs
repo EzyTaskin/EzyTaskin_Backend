@@ -160,7 +160,7 @@ public class RequestController : ControllerBase
             var request = await _requestService.GetRequest(requestId);
             if (request is null
                 || request.Selected is null
-                || request.Selected?.Provider != provider.Id)
+                || request.Selected?.Provider.Id != provider.Id)
             {
                 return BadRequest(error: ErrorStrings.InvalidRequest);
             }
@@ -248,7 +248,7 @@ public class RequestController : ControllerBase
 
             var offer = await _requestService.CreateOffer(new()
             {
-                Provider = provider.Id,
+                Provider = provider,
                 Request = requestId,
                 Price = price
             });

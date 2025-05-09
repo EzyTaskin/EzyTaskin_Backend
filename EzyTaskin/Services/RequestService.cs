@@ -218,7 +218,7 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        var dbProvider = await dbContext.Providers.SingleAsync(p => p.Id == offer.Provider);
+        var dbProvider = await dbContext.Providers.SingleAsync(p => p.Id == offer.Provider.Id);
         var dbRequest = await dbContext.Requests.SingleAsync(r => r.Id == offer.Request);
         var dbOffer = (await dbContext.Offers.AddAsync(new()
         {

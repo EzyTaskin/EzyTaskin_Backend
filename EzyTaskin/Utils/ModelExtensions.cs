@@ -55,7 +55,7 @@ public static class ModelExtensions
         return dbOffer == null ? null : new()
         {
             Id = dbOffer.Id,
-            Provider = dbOffer.Provider.Id,
+            Provider = ToModel(dbOffer.Provider),
             Request = dbOffer.Request.Id,
             Price = dbOffer.Price
         };
