@@ -8,20 +8,14 @@ class PremiumLifetimeService : BackgroundService
 {
     private readonly ILogger _logger;
     private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
-    private readonly NotificationService _notificationService;
-    private readonly PaymentService _paymentService;
 
     public PremiumLifetimeService(
         ILogger<PremiumLifetimeService> logger,
-        DbContextOptions<ApplicationDbContext> dbContextOptions,
-        NotificationService notificationService,
-        PaymentService paymentService
+        DbContextOptions<ApplicationDbContext> dbContextOptions
     )
     {
         _logger = logger;
         _dbContextOptions = dbContextOptions;
-        _notificationService = notificationService;
-        _paymentService = paymentService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -57,6 +51,9 @@ class PremiumLifetimeService : BackgroundService
         {
             _logger.LogInformation($"{nameof(DeactivateExpiredPremium)} check is running.");
 
+            var notificationService = new NotificationService(_dbContextOptions);
+            var paymentService = new PaymentService(_dbContextOptions);
+
             var dbContext = new ApplicationDbContext(_dbContextOptions);
             var transaction = await dbContext.Database.BeginTransactionAsync();
 
@@ -90,18 +87,18 @@ class PremiumLifetimeService : BackgroundService
                 try
                 {
                     var paymentMethod =
-                        await _paymentService
+                        await paymentService
                             .GetPaymentMethods(Guid.Parse(dbProvider.Account.Id))
                             .FirstOrDefaultAsync();
 
                     if (paymentMethod is not null)
                     {
-                        await _paymentService.Debit(paymentMethod.Id, 8.99m);
+                        await paymentService.Debit(paymentMethod.Id, 8.99m);
                         dbProvider.IsPremium = true;
                         dbProvider.IsSubscriptionActive = true;
                         dbProvider.SubscriptionDate = now;
 
-                        await _notificationService.SendNotification(new()
+                        await notificationService.SendNotification(new()
                         {
                             Timestamp = now,
                             Account = Guid.Parse(dbProvider.Account.Id),
@@ -119,7 +116,7 @@ class PremiumLifetimeService : BackgroundService
 
                 if (dbProvider.IsPremium == false)
                 {
-                    await _notificationService.SendNotification(new()
+                    await notificationService.SendNotification(new()
                     {
                         Timestamp = now,
                         Account = Guid.Parse(dbProvider.Account.Id),
