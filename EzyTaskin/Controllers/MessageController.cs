@@ -12,10 +12,15 @@ namespace EzyTaskin.Controllers;
 public class MessageController : ControllerBase
 {
     private readonly MessageService _messageService;
+    private readonly NotificationService _notificationService;
 
-    public MessageController(MessageService messageService)
+    public MessageController(
+        MessageService messageService,
+        NotificationService notificationService
+    )
     {
         _messageService = messageService;
+        _notificationService = notificationService;
     }
 
     [HttpGet]
@@ -46,15 +51,10 @@ public class MessageController : ControllerBase
         [FromBody][Required] string content
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return BadRequest();
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
@@ -66,11 +66,25 @@ public class MessageController : ControllerBase
                 Receiver = peerId,
                 Content = content
             });
-            return message;
+
+            if (message is null)
+            {
+                return BadRequest(error: ErrorStrings.ErrorTryAgain);
+            }
+
+            await _notificationService.SendNotification(new()
+            {
+                Timestamp = DateTime.UtcNow,
+                Account = peerId,
+                Title = "Messages",
+                Content = "You have an incoming message."
+            });
+
+            return Ok(message);
         }
         catch
         {
-            return BadRequest();
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 }

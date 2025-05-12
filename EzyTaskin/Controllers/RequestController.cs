@@ -12,18 +12,21 @@ namespace EzyTaskin.Controllers;
 public class RequestController : ControllerBase
 {
     private readonly RequestService _requestService;
+    private readonly NotificationService _notificationService;
     private readonly PaymentService _paymentService;
     private readonly ProfileService _profileService;
     private readonly CategoryService _categoryService;
 
     public RequestController(
         RequestService requestService,
+        NotificationService notificationService,
         PaymentService paymentService,
         ProfileService profileService,
         CategoryService categoryService
     )
     {
         _requestService = requestService;
+        _notificationService = notificationService;
         _paymentService = paymentService;
         _profileService = profileService;
         _categoryService = categoryService;
@@ -201,6 +204,22 @@ public class RequestController : ControllerBase
                 return BadRequest(error: ErrorStrings.ErrorTryAgain);
             }
 
+            await _notificationService.SendNotification(new()
+            {
+                Timestamp = DateTime.Now,
+                Account = request.Consumer.Account,
+                Title = "Tasks",
+                Content = $"\"{request.Title}\" has been completed."
+            });
+
+            await _notificationService.SendNotification(new()
+            {
+                Timestamp = DateTime.Now,
+                Account = provider.Account,
+                Title = "Tasks",
+                Content = $"\"{request.Title}\" has been completed."
+            });
+
             return Ok(await _requestService.GetRequest(requestId));
         }
         catch
@@ -230,17 +249,17 @@ public class RequestController : ControllerBase
                 return Unauthorized(ErrorStrings.NotAProvider);
             }
 
+            var request = await _requestService.GetRequest(requestId);
+            if (request is null)
+            {
+                return BadRequest(error: ErrorStrings.InvalidRequest);
+            }
+
             if (price.HasValue)
             {
                 if (!provider.IsPremium)
                 {
                     return Unauthorized(ErrorStrings.PremiumRequired);
-                }
-
-                var request = await _requestService.GetRequest(requestId);
-                if (request is null)
-                {
-                    return BadRequest(error: ErrorStrings.InvalidRequest);
                 }
 
                 if (price.Value > request.Budget)
@@ -254,6 +273,21 @@ public class RequestController : ControllerBase
                 Provider = provider,
                 Request = requestId,
                 Price = price
+            });
+
+            if (offer is null)
+            {
+                return BadRequest(error: ErrorStrings.ErrorTryAgain);
+            }
+
+            await _notificationService.SendNotification(new()
+            {
+                Timestamp = DateTime.Now,
+                Account = request.Consumer.Account,
+                Title = "Tasks",
+                Content =
+                    $"A provider is offering to do \"{request.Title}\"" +
+                        (offer.Price.HasValue ? $" for {offer.Price}." : ".")
             });
 
             return Ok(offer);
@@ -296,13 +330,39 @@ public class RequestController : ControllerBase
                 return BadRequest(error: ErrorStrings.RequestAlreadyComplete);
             }
 
+            var oldOffer = request.Selected;
+
             var offer = await _requestService.GetOffer(offerId);
             if (offer is null || offer.Request != requestId)
             {
                 return BadRequest(error: ErrorStrings.InvalidOffer);
             }
 
-            await _requestService.SelectOffer(offerId);
+            offer = await _requestService.SelectOffer(offerId);
+            if (offer is null)
+            {
+                return BadRequest(error: ErrorStrings.ErrorTryAgain);
+            }
+
+            await _notificationService.SendNotification(new()
+            {
+                Timestamp = DateTime.Now,
+                Account = offer.Provider.Account,
+                Title = "Tasks",
+                Content = $"Your offer for \"{request.Title}\" has been selected."
+            });
+
+            if (oldOffer is not null)
+            {
+                await _notificationService.SendNotification(new()
+                {
+                    Timestamp = DateTime.Now,
+                    Account = oldOffer.Provider.Account,
+                    Title = "Tasks",
+                    Content =
+                        $"Unfortunately, your offer for \"{request.Title}\" has been unselected."
+                });
+            }
 
             return Ok(await _requestService.GetRequest(request.Id));
         }
