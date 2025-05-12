@@ -68,6 +68,9 @@ public static class ModelExtensions
         {
             Id = dbProvider.Id,
             Account = Guid.Parse(dbProvider.Account.Id),
+            Email = dbProvider.Account.Email,
+            Name = dbProvider.Account.FullName,
+            PhoneNumber = dbProvider.Account.PhoneNumber,
             Description = dbProvider.Description,
             TotalRating = dbProvider.TotalRating,
             ReviewCount = dbProvider.ReviewCount,
