@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using EzyTaskin.Data;
 using EzyTaskin.Utils;
 using Microsoft.EntityFrameworkCore;

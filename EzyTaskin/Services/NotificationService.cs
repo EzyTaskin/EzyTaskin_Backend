@@ -15,7 +15,7 @@ public class NotificationService(DbContextOptions<ApplicationDbContext> dbContex
         var query = dbContext.Notifications
             .Include(n => n.Account)
             .Where(n => n.Account.Id == $"{accountId}")
-            .OrderByDescending(n => n.Account)
+            .OrderByDescending(n => n.Timestamp)
             .AsQueryable();
 
         if (after.HasValue)
