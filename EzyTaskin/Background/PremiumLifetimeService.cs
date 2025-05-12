@@ -4,26 +4,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EzyTaskin.Background;
 
-class PremiumLifetimeService : BackgroundService
+class PremiumLifetimeService(
+    IServiceScopeFactory serviceScopeFactory,
+    ILogger<PremiumLifetimeService> logger
+) : BackgroundService
 {
-    private readonly ILogger _logger;
-    private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
-
-    public PremiumLifetimeService(
-        ILogger<PremiumLifetimeService> logger,
-        DbContextOptions<ApplicationDbContext> dbContextOptions
-    )
-    {
-        _logger = logger;
-        _dbContextOptions = dbContextOptions;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation($"{nameof(PremiumLifetimeService)} is starting.");
+        logger.LogInformation($"{nameof(PremiumLifetimeService)} is starting.");
         stoppingToken.Register(() =>
         {
-            _logger.LogInformation($"{nameof(PremiumLifetimeService)} is stopping.");
+            logger.LogInformation($"{nameof(PremiumLifetimeService)} is stopping.");
         });
 
         while (!stoppingToken.IsCancellationRequested)
@@ -38,7 +29,7 @@ class PremiumLifetimeService : BackgroundService
             }
             catch (Exception e)
             {
-                _logger.LogError(
+                logger.LogError(
                     $"{nameof(PremiumLifetimeService)} Task.Delay failed with: {{Exception}}", e
                 );
             }
@@ -49,12 +40,18 @@ class PremiumLifetimeService : BackgroundService
     {
         try
         {
-            _logger.LogInformation($"{nameof(DeactivateExpiredPremium)} check is running.");
+            logger.LogInformation($"{nameof(DeactivateExpiredPremium)} check is running.");
 
-            var notificationService = new NotificationService(_dbContextOptions);
-            var paymentService = new PaymentService(_dbContextOptions);
+            using var scope = serviceScopeFactory.CreateScope();
 
-            var dbContext = new ApplicationDbContext(_dbContextOptions);
+            var notificationService = scope.ServiceProvider
+                .GetRequiredService<NotificationService>();
+            var paymentService  = scope.ServiceProvider
+                .GetRequiredService<PaymentService>();
+
+            var dbContextOptions =
+                scope.ServiceProvider.GetRequiredService<DbContextOptions<ApplicationDbContext>>();
+            var dbContext = new ApplicationDbContext(dbContextOptions);
             var transaction = await dbContext.Database.BeginTransactionAsync();
 
             var now = DateTime.UtcNow.Date;
@@ -109,7 +106,7 @@ class PremiumLifetimeService : BackgroundService
                 }
                 catch (Exception e)
                 {
-                    _logger.LogInformation(
+                    logger.LogInformation(
                         $"{nameof(DeactivateExpiredPremium)} failed: {{Exception}}", e
                     );
                 }
@@ -132,11 +129,11 @@ class PremiumLifetimeService : BackgroundService
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            _logger.LogInformation($"{nameof(DeactivateExpiredPremium)} check completed.");
+            logger.LogInformation($"{nameof(DeactivateExpiredPremium)} check completed.");
         }
         catch (Exception e)
         {
-            _logger.LogError($"{nameof(DeactivateExpiredPremium)} failed with: {{Exception}}", e);
+            logger.LogError($"{nameof(DeactivateExpiredPremium)} failed with: {{Exception}}", e);
         }
     }
 }
