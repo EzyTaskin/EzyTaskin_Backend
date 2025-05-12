@@ -11,16 +11,19 @@ namespace EzyTaskin.Controllers;
 public class ReviewController : ControllerBase
 {
     private readonly ReviewService _reviewService;
+    private readonly NotificationService _notificationService;
     private readonly ProfileService _profileService;
     private readonly RequestService _requestService;
 
     public ReviewController(
         ReviewService reviewService,
+        NotificationService notificationService,
         ProfileService profileService,
         RequestService requestService
     )
     {
         _reviewService = reviewService;
+        _notificationService = notificationService;
         _profileService = profileService;
         _requestService = requestService;
     }
@@ -60,6 +63,21 @@ public class ReviewController : ControllerBase
                 Request = requestId,
                 Rating = rating,
                 Description = description
+            });
+
+            if (review is null)
+            {
+                return BadRequest(error: ErrorStrings.ErrorTryAgain);
+            }
+
+            await _notificationService.SendNotification(new()
+            {
+                Timestamp = DateTime.Now,
+                Account = request.Consumer.Account,
+                Title = "Reviews",
+                Content =
+                    $"A review of your performance in \"{request.Title}\"" +
+                        " has been added."
             });
 
             return Ok(review);
