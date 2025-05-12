@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using EzyTaskin.Data;
 using EzyTaskin.Utils;
 using Microsoft.EntityFrameworkCore;
@@ -43,14 +42,29 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
         return dbProvider.ToModel();
     }
 
-    public async Task<Data.Model.Provider?> UpdateProvider(Data.Model.Provider provider)
+    public async Task<Data.Model.Provider?> UpdateProvider(
+        Guid providerId,
+        Func<Data.Model.Provider, Task<Data.Model.Provider?>> callback
+    )
     {
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var dbProvider = await dbContext.Providers
             .Include(p => p.Account)
-            .SingleAsync(p => p.Id == provider.Id);
+            .SingleOrDefaultAsync(p => p.Id == providerId);
+
+        if (dbProvider is null)
+        {
+            return null;
+        }
+
+        var provider = await callback(dbProvider.ToModel());
+        if (provider is null)
+        {
+            return null;
+        }
+
         dbProvider.Description = provider.Description;
         dbProvider.IsPremium = provider.IsPremium;
         dbProvider.IsSubscriptionActive = provider.IsSubscriptionActive;
@@ -63,64 +77,12 @@ public class ProfileService(DbContextOptions<ApplicationDbContext> dbContextOpti
         dbContext.Providers.Update(dbProvider);
 
         await dbContext.SaveChangesAsync();
+
+        await dbContext.Entry(dbProvider).ReloadAsync();
+        provider = dbProvider.ToModel();
+
         await transaction.CommitAsync();
-
-        return dbProvider.ToModel();
-    }
-
-    public async IAsyncEnumerable<Data.Model.Category> SetProviderCategories(
-        Guid providerId,
-        ICollection<Guid> categoryId
-    )
-    {
-        using var dbContext = DbContext;
-        using var transaction = await dbContext.Database.BeginTransactionAsync();
-
-        var dbCategories = await dbContext.Categories
-            .Join(categoryId, c => c.Id, i => i, (c, _) => c)
-            .ToListAsync();
-
-        if (dbCategories.Count != categoryId.Count)
-        {
-            yield break;
-        }
-
-        var oldDbProviderCategories = await dbContext.ProviderCategories
-            .Include(pc => pc.Provider)
-            .Where(pc => pc.Provider.Id == providerId)
-            .ToListAsync();
-        dbContext.ProviderCategories.RemoveRange(oldDbProviderCategories);
-
-        var dbProvider = await dbContext.Providers.SingleAsync(p => p.Id == providerId);
-
-        foreach (var dbCategory in dbCategories)
-        {
-            dbContext.ProviderCategories.Add(new()
-            {
-                Provider = dbProvider,
-                Category = dbCategory
-            });
-
-            yield return dbCategory.ToModel();
-        }
-
-        await dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-    }
-
-    public async IAsyncEnumerable<Data.Model.Category> GetProviderCategories(
-        Guid providerId
-    )
-    {
-        using var dbContext = DbContext;
-        var query = dbContext.ProviderCategories
-            .Include(pc => pc.Provider)
-            .Include(pc => pc.Category)
-            .Where(pc => pc.Provider.Id == providerId);
-        await foreach (var dbProviderCategory in query.AsAsyncEnumerable())
-        {
-            yield return dbProviderCategory.Category.ToModel();
-        }
+        return provider;
     }
 
     public async Task<Data.Model.Consumer> CreateConsumer(Guid accountId)

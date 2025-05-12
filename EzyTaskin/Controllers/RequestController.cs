@@ -71,7 +71,7 @@ public class RequestController : ControllerBase
                 var categoryIds = await _categoryService.GetCategoriesFor(category)
                     .Select(c => c.Id)
                     .ToListAsync();
-                request.Categories = await _requestService
+                request.Categories = await _categoryService
                     .SetRequestCategories(request.Id, categoryIds)
                     .ToListAsync();
             }
@@ -182,20 +182,24 @@ public class RequestController : ControllerBase
                 return BadRequest(error: ErrorStrings.NoPaymentMethod);
             }
 
-            var completedRequest = await _requestService.CompleteRequest(requestId);
+            var completedRequest = await _requestService.CompleteRequest(requestId, async (_) =>
+            {
+                var price = request.Selected.Price ?? request.Budget;
+                price = Math.Min(price, request.Budget);
+
+                await _paymentService.Transfer(
+                    fromId: consumerPaymentMethod.Id,
+                    toId: providerPaymentMethod.Id,
+                    amount: price
+                );
+
+                return true;
+            });
+
             if (completedRequest is null)
             {
-                return BadRequest(error: ErrorStrings.RequestAlreadyComplete);
+                return BadRequest(error: ErrorStrings.ErrorTryAgain);
             }
-
-            var price = request.Selected.Price ?? request.Budget;
-            price = Math.Min(price, request.Budget);
-
-            await _paymentService.Transfer(
-                fromId: consumerPaymentMethod.Id,
-                toId: providerPaymentMethod.Id,
-                amount: price
-            );
 
             return Ok(await _requestService.GetRequest(requestId));
         }
@@ -228,7 +232,6 @@ public class RequestController : ControllerBase
 
             if (price.HasValue)
             {
-                // TODO: Check if premium state is updated?
                 if (!provider.IsPremium)
                 {
                     return Unauthorized(ErrorStrings.PremiumRequired);

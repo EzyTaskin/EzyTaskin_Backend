@@ -1,3 +1,4 @@
+using EzyTaskin.Background;
 using EzyTaskin.Data;
 using EzyTaskin.Identity;
 using EzyTaskin.Services;
@@ -121,6 +122,8 @@ builder.Services.AddScoped<ReviewService>();
 builder.Services
     .AddEndpointsApiExplorer()
     .AddSwaggerGen();
+
+builder.Services.AddHostedService<PremiumLifetimeService>();
 
 var app = builder.Build();
 

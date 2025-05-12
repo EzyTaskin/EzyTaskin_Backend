@@ -132,7 +132,10 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         }
     }
 
-    public async Task<Data.Model.Request?> CompleteRequest(Guid requestId)
+    public async Task<Data.Model.Request?> CompleteRequest(
+        Guid requestId,
+        Func<Data.Model.Request, Task<bool>>? callback
+    )
     {
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
@@ -153,64 +156,18 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         dbContext.Consumers.Update(dbRequest.Consumer);
 
         await dbContext.SaveChangesAsync();
+
+        await dbContext.Entry(dbRequest).ReloadAsync();
+        var request = dbRequest.ToModel();
+
+        if (callback is not null && !await callback(request))
+        {
+            await transaction.RollbackAsync();
+            return null;
+        }
+
         await transaction.CommitAsync();
-
-        return dbRequest.ToModel();
-    }
-
-    public async IAsyncEnumerable<Data.Model.Category> SetRequestCategories(
-        Guid requestId,
-        ICollection<Guid> categoryId
-    )
-    {
-        using var dbContext = DbContext;
-        using var transaction = await dbContext.Database.BeginTransactionAsync();
-
-        var dbCategories = await dbContext.Categories
-            .Join(categoryId, c => c.Id, i => i, (c, _) => c)
-            .ToListAsync();
-
-        if (dbCategories.Count != categoryId.Count)
-        {
-            yield break;
-        }
-
-        var oldDbRequestCategories = await dbContext.RequestCategories
-            .Include(pc => pc.Request)
-            .Where(pc => pc.Request.Id == requestId)
-            .ToListAsync();
-        dbContext.RequestCategories.RemoveRange(oldDbRequestCategories);
-
-        var dbRequest = await dbContext.Requests.SingleAsync(p => p.Id == requestId);
-
-        foreach (var dbCategory in dbCategories)
-        {
-            dbContext.RequestCategories.Add(new()
-            {
-                Request = dbRequest,
-                Category = dbCategory
-            });
-
-            yield return dbCategory.ToModel();
-        }
-
-        await dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-    }
-
-    public async IAsyncEnumerable<Data.Model.Category> GetRequestCategories(
-        Guid requestId
-    )
-    {
-        using var dbContext = DbContext;
-        var query = dbContext.RequestCategories
-            .Include(pc => pc.Request)
-            .Include(pc => pc.Category)
-            .Where(pc => pc.Request.Id == requestId);
-        await foreach (var dbRequestCategory in query.AsAsyncEnumerable())
-        {
-            yield return dbRequestCategory.Category.ToModel();
-        }
+        return request;
     }
 
     public async Task<Data.Model.Offer> CreateOffer(Data.Model.Offer offer)

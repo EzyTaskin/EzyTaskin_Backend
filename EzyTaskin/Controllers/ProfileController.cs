@@ -12,18 +12,21 @@ public class ProfileController : ControllerBase
 {
     private readonly ProfileService _profileService;
     private readonly PaymentService _paymentService;
+    private readonly NotificationService _notificationService;
     private readonly RequestService _requestService;
     private readonly CategoryService _categoryService;
 
     public ProfileController(
         ProfileService profileService,
         PaymentService paymentService,
+        NotificationService notificationService,
         RequestService requestService,
         CategoryService categoryService
     )
     {
         _profileService = profileService;
         _paymentService = paymentService;
+        _notificationService = notificationService;
         _requestService = requestService;
         _categoryService = categoryService;
     }
@@ -78,7 +81,7 @@ public class ProfileController : ControllerBase
 
             // Populate categories.
             provider.Categories =
-                await _profileService.GetProviderCategories(provider.Id).ToArrayAsync();
+                await _categoryService.GetProviderCategories(provider.Id).ToArrayAsync();
 
             // Populate completed requests.
             provider.CompletedRequests =
@@ -99,15 +102,10 @@ public class ProfileController : ControllerBase
         [FromForm] ICollection<string>? category
     )
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest();
-        }
-
         var accountId = this.TryGetAccountId();
         if (accountId == Guid.Empty)
         {
-            return BadRequest();
+            return BadRequest(error: ErrorStrings.SessionExpired);
         }
 
         try
@@ -115,34 +113,50 @@ public class ProfileController : ControllerBase
             var provider = await _profileService.GetProvider(accountId);
             if (provider is null)
             {
-                return Unauthorized();
+                return Unauthorized(ErrorStrings.NotAProvider);
             }
 
             List<Category>? newCategories = null;
 
             if (category is not null)
             {
-                var categoryIds = await _categoryService.GetCategoriesFor(category)
-                    .Select(c => c.Id)
-                    .ToListAsync();
-                newCategories = await _profileService
-                    .SetProviderCategories(provider.Id, categoryIds)
-                    .ToListAsync();
+
             }
 
-            provider.Description = description;
-            provider = await _profileService.UpdateProvider(provider);
-
-            if (provider is not null)
+            provider = await _profileService.UpdateProvider(provider.Id, async (provider) =>
             {
-                provider.Categories ??= newCategories;
+                provider.Description = description;
+                if (category is not null)
+                {
+                    try
+                    {
+                        var categoryIds = await _categoryService.GetCategoriesFor(category)
+                            .Select(c => c.Id)
+                            .ToListAsync();
+                        newCategories = await _categoryService
+                            .SetProviderCategories(provider.Id, categoryIds)
+                            .ToListAsync();
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                }
+                return provider;
+            });
+
+            if (provider is null)
+            {
+                return BadRequest(error: ErrorStrings.ErrorTryAgain);
             }
+
+            provider.Categories ??= newCategories;
 
             return Ok(provider);
         }
         catch
         {
-            return BadRequest();
+            return BadRequest(error: ErrorStrings.ErrorTryAgain);
         }
     }
 
@@ -165,16 +179,10 @@ public class ProfileController : ControllerBase
             {
                 return Unauthorized(ErrorStrings.NotAProvider);
             }
-
             if (provider.IsSubscriptionActive)
             {
                 return BadRequest(ErrorStrings.PremiumAlreadyActive);
             }
-
-            // TODO: Inspect whether there may be a race condition?
-            provider.IsPremium = true;
-            provider.IsSubscriptionActive = true;
-            provider.SubscriptionDate = DateTime.UtcNow;
 
             var validPaymentMethods =
                 await _paymentService.GetPaymentMethods(accountId)
@@ -190,17 +198,54 @@ public class ProfileController : ControllerBase
             }
             else
             {
-                if (!validPaymentMethods.Any())
+                if (validPaymentMethods.Count != 0)
                 {
                     return BadRequest(error: ErrorStrings.NoPaymentMethod);
                 }
                 paymentMethod = validPaymentMethods.First();
             }
 
-            // TODO: Debit amount?
-            await _paymentService.Debit(paymentMethod.Value, 0.0m);
+            provider = await _profileService.UpdateProvider(provider.Id, async (provider) =>
+            {
+                provider.IsPremium = true;
 
-            provider = await _profileService.UpdateProvider(provider);
+                if (provider.IsSubscriptionActive)
+                {
+                    return provider;
+                }
+                provider.IsSubscriptionActive = true;
+
+                if (provider.SubscriptionDate.HasValue)
+                {
+                    return provider;
+                }
+
+                try
+                {
+                    await _paymentService.Debit(paymentMethod.Value, 8.99m);
+                }
+                catch
+                {
+                    return null;
+                }
+
+                provider.SubscriptionDate = DateTime.UtcNow;
+                return provider;
+            });
+
+            if (provider is null)
+            {
+                return BadRequest(error: ErrorStrings.ErrorTryAgain);
+            }
+
+            await _notificationService.SendNotification(new()
+            {
+                Timestamp = DateTime.UtcNow,
+                Account = provider.Account,
+                Title = "Subscription",
+                Content = "Your premium subscription has been activated."
+            });
+
             return Ok(provider);
         }
         catch
@@ -232,8 +277,25 @@ public class ProfileController : ControllerBase
                 return BadRequest(ErrorStrings.PremiumNotActive);
             }
 
-            provider.IsSubscriptionActive = false;
-            provider = await _profileService.UpdateProvider(provider);
+            provider = await _profileService.UpdateProvider(provider.Id, (provider) =>
+            {
+                provider.IsSubscriptionActive = false;
+                return Task.FromResult<Provider?>(provider);
+            });
+
+            if (provider is null)
+            {
+                return BadRequest(error: ErrorStrings.ErrorTryAgain);
+            }
+
+            await _notificationService.SendNotification(new()
+            {
+                Timestamp = DateTime.UtcNow,
+                Account = provider.Account,
+                Title = "Subscription",
+                Content = "Your premium subscription has been deactivated. " +
+                    "Your benefits will remain until the next billing period."
+            });
 
             return Ok(provider);
         }
