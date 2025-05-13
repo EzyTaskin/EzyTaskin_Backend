@@ -1,6 +1,6 @@
 ﻿using PostmarkDotNet;
 
-namespace EzyTaskin.Services;
+namespace EzyTaskin.Messages.Email;
 
 public class PostmarkEmailService : IEmailService
 {

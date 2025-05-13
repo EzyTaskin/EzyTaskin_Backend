@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace EzyTaskin.Services;
+namespace EzyTaskin.Messages.Email;
 
 public class NoOpEmailService : IEmailService
 {

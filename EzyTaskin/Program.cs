@@ -1,6 +1,7 @@
 using EzyTaskin.Background;
 using EzyTaskin.Data;
 using EzyTaskin.Identity;
+using EzyTaskin.Messages.Email;
 using EzyTaskin.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -100,13 +101,18 @@ builder.Services.AddSingleton<IEmailSender<Account>, IdentityEmailSender>();
 
 if (builder.Environment.IsDevelopment())
 {
-    builder.Services.AddSingleton<IEmailService, NoOpEmailService>();
+    builder.Services.AddSingleton<EmailServiceFactory, NoOpEmailServiceFactory>();
 }
 else
 {
-    builder.Services.AddSingleton(new PostmarkClient(builder.Configuration["ApiKeys:Postmark"]
-        ?? throw new InvalidOperationException("Postmark API key not found.")));
-    builder.Services.AddSingleton<IEmailService, PostmarkEmailService>();
+    builder.Services.AddSingleton<EmailServiceFactory>((serviceProvider) =>
+        new PostmarkEmailServiceFactory(
+            configuration: serviceProvider.GetRequiredService<IConfiguration>(),
+            webHostEnvironment: serviceProvider.GetRequiredService<IWebHostEnvironment>(),
+            client: new PostmarkClient(builder.Configuration["ApiKeys:Postmark"]
+                ?? throw new InvalidOperationException("Postmark API key not found."))
+        )
+    );
 }
 
 builder.Services.AddControllers();

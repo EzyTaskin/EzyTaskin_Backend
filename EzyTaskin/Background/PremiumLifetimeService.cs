@@ -1,5 +1,7 @@
 using EzyTaskin.Data;
 using EzyTaskin.Services;
+using EzyTaskin.Subscriptions;
+using EzyTaskin.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace EzyTaskin.Background;
@@ -90,7 +92,10 @@ class PremiumLifetimeService(
 
                     if (paymentMethod is not null)
                     {
-                        await paymentService.Debit(paymentMethod.Id, 8.99m);
+                        await paymentService.Debit(
+                            paymentMethod.Id,
+                            Premium.Instance.CalculatePrice(dbProvider.ToModel())
+                        );
                         dbProvider.IsPremium = true;
                         dbProvider.IsSubscriptionActive = true;
                         dbProvider.SubscriptionDate = now;

@@ -1,11 +1,14 @@
 using EzyTaskin.Data;
+using EzyTaskin.Messages;
 using Microsoft.EntityFrameworkCore;
 
 namespace EzyTaskin.Services;
 
 public class NotificationService(DbContextOptions<ApplicationDbContext> dbContextOptions)
-    : DbService(dbContextOptions)
+    : DbService(dbContextOptions), IMessageSender
 {
+    public event Func<IMessageSender?, Guid, string, string, string?, Task>? OnMessageSent;
+
     public async IAsyncEnumerable<Data.Model.Notification> GetNotifications(
         Guid accountId,
         DateTime? after
@@ -29,27 +32,18 @@ public class NotificationService(DbContextOptions<ApplicationDbContext> dbContex
         }
     }
 
-    public async Task<Data.Model.Notification> SendNotification(
-        Data.Model.Notification notification
-    )
+    public async Task SendNotification(Data.Model.Notification notification)
     {
-        using var dbContext = DbContext;
-        using var transaction = await dbContext.Database.BeginTransactionAsync();
-
-        var dbAccount = await dbContext.Users.SingleAsync(u => u.Id == $"{notification.Account}");
-
-        var dbNotification = (await dbContext.Notifications.AddAsync(new()
+        if (OnMessageSent is not null)
         {
-            Timestamp = notification.Timestamp,
-            Account = dbAccount,
-            Title = notification.Title,
-            Content = notification.Content
-        })).Entity;
-
-        await dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return ToModel(dbNotification);
+            await OnMessageSent.Invoke(
+                this,
+                notification.Account,
+                notification.Title,
+                notification.Content,
+                notification.FormattedContent
+            );
+        }
     }
 
     private static Data.Model.Notification ToModel(Data.Db.Notification notification)

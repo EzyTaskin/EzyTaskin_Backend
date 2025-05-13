@@ -1,17 +1,14 @@
 ﻿using EzyTaskin.Data;
-using EzyTaskin.Services;
+using EzyTaskin.Messages.Email;
 using Microsoft.AspNetCore.Identity;
 
 namespace EzyTaskin.Identity;
 
-internal sealed class IdentityEmailSender : IEmailSender<Account>
+internal sealed class IdentityEmailSender(
+    EmailServiceFactory emailServiceFactory
+) : IEmailSender<Account>
 {
-    private readonly IEmailService _emailService;
-
-    public IdentityEmailSender(IEmailService emailService)
-    {
-        _emailService = emailService;
-    }
+    private readonly IEmailService _emailService = emailServiceFactory.CreateEmailService();
 
     public Task SendConfirmationLinkAsync(Account user, string email, string confirmationLink) =>
         _emailService.SendEmailAsync(

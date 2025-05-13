@@ -1,4 +1,4 @@
-﻿namespace EzyTaskin.Services;
+﻿namespace EzyTaskin.Messages.Email;
 
 public interface IEmailService
 {

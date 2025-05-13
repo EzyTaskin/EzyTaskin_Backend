@@ -1,5 +1,6 @@
 using EzyTaskin.Data.Model;
 using EzyTaskin.Services;
+using EzyTaskin.Subscriptions;
 using EzyTaskin.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -222,7 +223,10 @@ public class ProfileController : ControllerBase
 
                 try
                 {
-                    await _paymentService.Debit(paymentMethod.Value, 8.99m);
+                    await _paymentService.Debit(
+                        paymentMethod.Value,
+                        Premium.Instance.CalculatePrice(provider)
+                    );
                 }
                 catch
                 {
