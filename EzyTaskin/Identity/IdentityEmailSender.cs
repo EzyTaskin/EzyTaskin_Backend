@@ -1,5 +1,5 @@
-﻿using EzyTaskin.Data;
-using EzyTaskin.Messages.Email;
+﻿using EzyTaskin.Alerts.Email;
+using EzyTaskin.Data;
 using Microsoft.AspNetCore.Identity;
 
 namespace EzyTaskin.Identity;

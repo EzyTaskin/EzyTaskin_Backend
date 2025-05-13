@@ -1,15 +1,15 @@
 using EzyTaskin.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace EzyTaskin.Messages.Email;
+namespace EzyTaskin.Alerts.Email;
 
-public class EmailMessageSender : IMessageObserver
+public class EmailMessageSender : IAlertObserver
 {
     private readonly IEmailService _emailService;
     private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
 
     public EmailMessageSender(
-        IMessageSender messageSender,
+        IAlertSender messageSender,
         EmailServiceFactory emailServiceFactory,
         DbContextOptions<ApplicationDbContext> dbContextOptions
     )
@@ -20,7 +20,7 @@ public class EmailMessageSender : IMessageObserver
     }
 
     public async Task SendMessageAsync(
-        IMessageSender? origin, Guid to, string subject, string body, string? htmlBody
+        IAlertSender? origin, Guid to, string subject, string body, string? htmlBody
     )
     {
         using var dbContext = new ApplicationDbContext(_dbContextOptions);

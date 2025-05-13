@@ -1,7 +1,9 @@
+using EzyTaskin.Alerts;
+using EzyTaskin.Alerts.Email;
+using EzyTaskin.Alerts.Notification;
 using EzyTaskin.Background;
 using EzyTaskin.Data;
 using EzyTaskin.Identity;
-using EzyTaskin.Messages.Email;
 using EzyTaskin.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -125,6 +127,10 @@ builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<RequestService>();
 builder.Services.AddScoped<ReviewService>();
 
+builder.Services.AddScoped<IAlertObserver, NotificationMessageSender>();
+builder.Services.AddScoped<IAlertObserver, EmailMessageSender>();
+builder.Services.AddScoped<IAlertSender>(s => s.GetRequiredService<NotificationService>());
+
 builder.Services
     .AddEndpointsApiExplorer()
     .AddSwaggerGen();
@@ -165,6 +171,16 @@ else
 }
 
 app.UseHttpsRedirection();
+
+app.Use(async (context, next) =>
+{
+    // Forces the service to initialize the event observers.
+    var messageObservers = context.RequestServices
+        .GetRequiredService<IEnumerable<IAlertObserver>>()
+        .ToArray();
+
+    await next();
+});
 
 app.Use(async (context, next) =>
 {

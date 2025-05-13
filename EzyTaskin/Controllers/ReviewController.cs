@@ -72,7 +72,7 @@ public class ReviewController : ControllerBase
 
             await _notificationService.SendNotification(new()
             {
-                Timestamp = DateTime.Now,
+                Timestamp = DateTime.UtcNow,
                 Account = request.Consumer.Account,
                 Title = "Reviews",
                 Content =

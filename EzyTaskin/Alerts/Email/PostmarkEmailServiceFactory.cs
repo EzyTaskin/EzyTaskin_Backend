@@ -1,6 +1,6 @@
 using PostmarkDotNet;
 
-namespace EzyTaskin.Messages.Email;
+namespace EzyTaskin.Alerts.Email;
 
 public class PostmarkEmailServiceFactory(
     IConfiguration configuration,

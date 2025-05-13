@@ -1,14 +1,14 @@
 using EzyTaskin.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace EzyTaskin.Messages.Notification;
+namespace EzyTaskin.Alerts.Notification;
 
-public class NotificationMessageSender : IMessageObserver
+public class NotificationMessageSender : IAlertObserver
 {
     private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
 
     public NotificationMessageSender(
-        IMessageSender messageSender,
+        IAlertSender messageSender,
         DbContextOptions<ApplicationDbContext> dbContextOptions
     )
     {
@@ -17,7 +17,7 @@ public class NotificationMessageSender : IMessageObserver
     }
 
     public async Task SendMessageAsync(
-        IMessageSender? origin, Guid to, string subject, string body, string? htmlBody
+        IAlertSender? origin, Guid to, string subject, string body, string? htmlBody
     )
     {
         using var dbContext = new ApplicationDbContext(_dbContextOptions);
@@ -25,9 +25,10 @@ public class NotificationMessageSender : IMessageObserver
         await dbContext.Notifications.AddAsync(new()
         {
             Account = account,
-            Timestamp = DateTime.Now,
+            Timestamp = DateTime.UtcNow,
             Title = subject,
             Content = body
         });
+        await dbContext.SaveChangesAsync();
     }
 }

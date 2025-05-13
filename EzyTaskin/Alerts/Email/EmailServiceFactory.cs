@@ -1,4 +1,4 @@
-namespace EzyTaskin.Messages.Email;
+namespace EzyTaskin.Alerts.Email;
 
 public abstract class EmailServiceFactory
 {

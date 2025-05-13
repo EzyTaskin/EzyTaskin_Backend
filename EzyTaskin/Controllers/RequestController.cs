@@ -206,7 +206,7 @@ public class RequestController : ControllerBase
 
             await _notificationService.SendNotification(new()
             {
-                Timestamp = DateTime.Now,
+                Timestamp = DateTime.UtcNow,
                 Account = request.Consumer.Account,
                 Title = "Tasks",
                 Content = $"\"{request.Title}\" has been completed."
@@ -214,7 +214,7 @@ public class RequestController : ControllerBase
 
             await _notificationService.SendNotification(new()
             {
-                Timestamp = DateTime.Now,
+                Timestamp = DateTime.UtcNow,
                 Account = provider.Account,
                 Title = "Tasks",
                 Content = $"\"{request.Title}\" has been completed."
@@ -282,7 +282,7 @@ public class RequestController : ControllerBase
 
             await _notificationService.SendNotification(new()
             {
-                Timestamp = DateTime.Now,
+                Timestamp = DateTime.UtcNow,
                 Account = request.Consumer.Account,
                 Title = "Tasks",
                 Content =
@@ -346,7 +346,7 @@ public class RequestController : ControllerBase
 
             await _notificationService.SendNotification(new()
             {
-                Timestamp = DateTime.Now,
+                Timestamp = DateTime.UtcNow,
                 Account = offer.Provider.Account,
                 Title = "Tasks",
                 Content = $"Your offer for \"{request.Title}\" has been selected."
@@ -356,7 +356,7 @@ public class RequestController : ControllerBase
             {
                 await _notificationService.SendNotification(new()
                 {
-                    Timestamp = DateTime.Now,
+                    Timestamp = DateTime.UtcNow,
                     Account = oldOffer.Provider.Account,
                     Title = "Tasks",
                     Content =

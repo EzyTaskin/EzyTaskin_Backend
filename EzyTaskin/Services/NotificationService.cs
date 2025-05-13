@@ -1,13 +1,13 @@
+using EzyTaskin.Alerts;
 using EzyTaskin.Data;
-using EzyTaskin.Messages;
 using Microsoft.EntityFrameworkCore;
 
 namespace EzyTaskin.Services;
 
 public class NotificationService(DbContextOptions<ApplicationDbContext> dbContextOptions)
-    : DbService(dbContextOptions), IMessageSender
+    : DbService(dbContextOptions), IAlertSender
 {
-    public event Func<IMessageSender?, Guid, string, string, string?, Task>? OnMessageSent;
+    public event Func<IAlertSender?, Guid, string, string, string?, Task>? OnMessageSent;
 
     public async IAsyncEnumerable<Data.Model.Notification> GetNotifications(
         Guid accountId,
