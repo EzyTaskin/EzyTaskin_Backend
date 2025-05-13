@@ -14,5 +14,8 @@ public class PaymentCommand
     public PaymentMethod? To { get; set; }
 
     [Required]
+    public required decimal Amount { get; set; }
+
+    [Required]
     public required string Type { get; set; }
 }

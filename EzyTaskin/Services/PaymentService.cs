@@ -70,6 +70,14 @@ public class PaymentService(DbContextOptions<ApplicationDbContext> dbContextOpti
             return false;
         }
 
+        await dbContext.PaymentCommands.AddAsync(new()
+        {
+            From = dbFrom,
+            To = dbTo,
+            Amount = paymentCommand.Amount,
+            Type = dbContext.GetType().Name
+        });
+
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
         return true;
