@@ -187,12 +187,11 @@ public class ProfileController : ControllerBase
 
             var validPaymentMethods =
                 await _paymentService.GetPaymentMethods(accountId)
-                    .Select(p => p.Id)
-                    .ToHashSetAsync();
+                    .ToDictionaryAsync(v => v.Id);
 
             if (paymentMethod.HasValue)
             {
-                if (!validPaymentMethods.Contains(paymentMethod.Value))
+                if (!validPaymentMethods.ContainsKey(paymentMethod.Value))
                 {
                     return BadRequest(error: ErrorStrings.InvalidPaymentMethod);
                 }
@@ -203,7 +202,7 @@ public class ProfileController : ControllerBase
                 {
                     return BadRequest(error: ErrorStrings.NoPaymentMethod);
                 }
-                paymentMethod = validPaymentMethods.First();
+                paymentMethod = validPaymentMethods.First().Key;
             }
 
             provider = await _profileService.UpdateProvider(provider.Id, async (provider) =>
@@ -223,10 +222,15 @@ public class ProfileController : ControllerBase
 
                 try
                 {
-                    await _paymentService.Debit(
-                        paymentMethod.Value,
-                        Premium.Instance.CalculatePrice(provider)
-                    );
+                    if (!await _paymentService.Transfer(
+                        new DebitPaymentCommand(
+                            validPaymentMethods[paymentMethod.Value],
+                            Premium.Instance.CalculatePrice(provider)
+                        )
+                    ))
+                    {
+                        return null;
+                    }
                 }
                 catch
                 {

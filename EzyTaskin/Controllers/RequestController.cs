@@ -190,13 +190,13 @@ public class RequestController : ControllerBase
                 var price = request.Selected.Price ?? request.Budget;
                 price = Math.Min(price, request.Budget);
 
-                await _paymentService.Transfer(
-                    fromId: consumerPaymentMethod.Id,
-                    toId: providerPaymentMethod.Id,
-                    amount: price
+                return await _paymentService.Transfer(
+                    new TransferPaymentCommand(
+                        consumerPaymentMethod,
+                        providerPaymentMethod,
+                        price
+                    )
                 );
-
-                return true;
             });
 
             if (completedRequest is null)

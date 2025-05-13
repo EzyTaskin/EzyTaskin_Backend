@@ -49,44 +49,30 @@ public class PaymentService(DbContextOptions<ApplicationDbContext> dbContextOpti
         return (Data.Model.CardPaymentMethod)ToModel(dbCard);
     }
 
-    public async Task Debit(Guid id, decimal amount)
-    {
-        // Deduct money from payment method and transfer to system.
-        await TransferInternal(id, null, amount);
-    }
-
-    public async Task Credit(Guid id, decimal amount)
-    {
-        // Add money to payment method by transferring from system.
-        await TransferInternal(null, id, amount);
-    }
-
-    public async Task Transfer(Guid fromId, Guid toId, decimal amount)
-    {
-        // Transfer money between parties.
-        await TransferInternal(fromId, toId, amount);
-    }
-
-    private async Task TransferInternal(Guid? fromId, Guid? toId, decimal amount)
+    public async Task<bool> Transfer(Data.Model.PaymentCommand paymentCommand)
     {
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         // Get first payment method.
-        var dbFrom = fromId.HasValue ?
-            await dbContext.PaymentMethods.SingleAsync(p => p.Id == fromId.Value) :
+        var dbFrom = paymentCommand.From != null ?
+            await dbContext.PaymentMethods.SingleAsync(p => p.Id == paymentCommand.From.Id) :
             null;
 
         // Get second payment method.
-        var dbTo = toId.HasValue ?
-            await dbContext.PaymentMethods.SingleAsync(p => p.Id == toId.Value) :
+        var dbTo = paymentCommand.To != null ?
+            await dbContext.PaymentMethods.SingleAsync(p => p.Id == paymentCommand.To.Id) :
             null;
 
-        // Check balance.
-        // Do some transactions here.
+        if (!await paymentCommand.Execute())
+        {
+            await transaction.RollbackAsync();
+            return false;
+        }
 
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
+        return true;
     }
 
     private static Data.Model.PaymentMethod ToModel(Data.Db.PaymentMethod dbPayment)

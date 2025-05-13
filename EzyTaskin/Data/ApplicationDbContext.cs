@@ -11,6 +11,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Consumer> Consumers { get; set; }
     public DbSet<Message> Messages { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<PaymentCommand> PaymentCommands { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
     public DbSet<Offer> Offers { get; set; }
     public DbSet<ProviderCategory> ProviderCategories { get; set; }
@@ -43,6 +44,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Notification>(b =>
         {
             b.HasOne(e => e.Account).WithMany();
+        });
+
+        builder.Entity<PaymentCommand>(b =>
+        {
+            b.HasOne(e => e.From).WithMany();
+            b.HasOne(e => e.To).WithMany();
         });
 
         builder.Entity<PaymentMethod>(b =>

@@ -1,4 +1,5 @@
 using EzyTaskin.Data;
+using EzyTaskin.Data.Model;
 using EzyTaskin.Services;
 using EzyTaskin.Subscriptions;
 using EzyTaskin.Utils;
@@ -48,7 +49,7 @@ class PremiumLifetimeService(
 
             var notificationService = scope.ServiceProvider
                 .GetRequiredService<NotificationService>();
-            var paymentService  = scope.ServiceProvider
+            var paymentService = scope.ServiceProvider
                 .GetRequiredService<PaymentService>();
 
             var dbContextOptions =
@@ -92,9 +93,11 @@ class PremiumLifetimeService(
 
                     if (paymentMethod is not null)
                     {
-                        await paymentService.Debit(
-                            paymentMethod.Id,
-                            Premium.Instance.CalculatePrice(dbProvider.ToModel())
+                        await paymentService.Transfer(
+                            new DebitPaymentCommand(
+                                paymentMethod,
+                                Premium.Instance.CalculatePrice(dbProvider.ToModel())
+                            )
                         );
                         dbProvider.IsPremium = true;
                         dbProvider.IsSubscriptionActive = true;
