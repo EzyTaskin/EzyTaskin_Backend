@@ -47,12 +47,26 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         return dbRequest.ToModel();
     }
 
-    public async IAsyncEnumerable<Data.Model.Request> GetRequests(Guid consumerId)
+    public async IAsyncEnumerable<Data.Model.Request> GetRequests(
+        Guid? consumerId,
+        Guid? providerId
+    )
     {
         using var dbContext = DbContext;
         var query = dbContext.Requests
-            .Saturate()
-            .Where(r => r.Consumer.Id == consumerId);
+            .Saturate();
+
+        if (consumerId.HasValue)
+        {
+            query = query.Where(r => r.Consumer.Id == consumerId);
+        }
+        if (providerId.HasValue)
+        {
+            query = query
+                .Where(r => r.Selected != null)
+                .Where(r => r.Selected!.Provider.Id == providerId);
+        }
+
         await foreach (var dbRequest in query.AsAsyncEnumerable())
         {
             yield return dbRequest.ToModel();

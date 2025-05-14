@@ -10,6 +10,8 @@ public static class ErrorStrings
 
     public static string InvalidPaymentMethod => "The specified payment method is invalid.";
 
+    public static string InvalidProfileType => "The speicifed profile type is invalid.";
+
     public static string InvalidRequest => "The specified service request is invalid.";
 
     public static string NoPaymentMethod => "A party has not registered any payment method.";

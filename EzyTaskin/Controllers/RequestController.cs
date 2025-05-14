@@ -90,7 +90,9 @@ public class RequestController : ControllerBase
     [HttpGet]
     [Authorize]
     public async Task<ActionResult> GetRequest(
-        [FromQuery] Guid? requestId
+        [FromQuery] Guid? requestId,
+        [FromQuery, RegularExpression($"^(?i:{nameof(Consumer)}|{nameof(Provider)})$")]
+        string? type
     )
     {
         try
@@ -117,12 +119,42 @@ public class RequestController : ControllerBase
                 {
                     return BadRequest(ErrorStrings.SessionExpired);
                 }
-                var consumer = await _profileService.GetConsumer(accountId);
-                if (consumer is null)
+
+                Guid? consumerId = null;
+                Guid? providerId = null;
+
+                switch (type)
                 {
-                    return Unauthorized(ErrorStrings.NotAConsumer);
+                    case nameof(Consumer):
+                    {
+                        var consumer = await _profileService.GetConsumer(accountId);
+                        if (consumer is null)
+                        {
+                            return Unauthorized(ErrorStrings.NotAConsumer);
+                        }
+                        consumerId = consumer.Id;
+                    }
+                    break;
+                    case nameof(Provider):
+                    {
+                        var provider = await _profileService.GetConsumer(accountId);
+                        if (provider is null)
+                        {
+                            return Unauthorized(ErrorStrings.NotAConsumer);
+                        }
+                        providerId = provider.Id;
+                    }
+                    break;
+                    default:
+                    {
+                        return BadRequest(ErrorStrings.InvalidProfileType);
+                    }
                 }
-                return Ok(_requestService.GetRequests(consumer.Id));
+
+                return Ok(_requestService.GetRequests(
+                    consumerId: consumerId,
+                    providerId: providerId
+                ));
             }
         }
         catch
