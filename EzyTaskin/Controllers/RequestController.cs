@@ -123,10 +123,10 @@ public class RequestController : ControllerBase
                 Guid? consumerId = null;
                 Guid? providerId = null;
 
-                switch (type)
+                switch (type?.ToLowerInvariant())
                 {
                     case null:
-                    case nameof(Consumer):
+                    case string s when s == nameof(Consumer).ToLowerInvariant():
                     {
                         var consumer = await _profileService.GetConsumer(accountId);
                         if (consumer is null)
@@ -136,12 +136,12 @@ public class RequestController : ControllerBase
                         consumerId = consumer.Id;
                     }
                     break;
-                    case nameof(Provider):
+                    case string s when s == nameof(Provider).ToLowerInvariant():
                     {
-                        var provider = await _profileService.GetConsumer(accountId);
+                        var provider = await _profileService.GetProvider(accountId);
                         if (provider is null)
                         {
-                            return Unauthorized(ErrorStrings.NotAConsumer);
+                            return Unauthorized(ErrorStrings.NotAProvider);
                         }
                         providerId = provider.Id;
                     }
