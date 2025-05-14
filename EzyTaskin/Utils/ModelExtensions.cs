@@ -71,6 +71,7 @@ public static class ModelExtensions
             Email = dbProvider.Account.Email,
             Name = dbProvider.Account.FullName,
             PhoneNumber = dbProvider.Account.PhoneNumber,
+            Address = dbProvider.Account.Address,
             Description = dbProvider.Description,
             TotalRating = dbProvider.TotalRating,
             ReviewCount = dbProvider.ReviewCount,
