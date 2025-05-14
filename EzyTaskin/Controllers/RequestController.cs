@@ -125,6 +125,7 @@ public class RequestController : ControllerBase
 
                 switch (type)
                 {
+                    case null:
                     case nameof(Consumer):
                     {
                         var consumer = await _profileService.GetConsumer(accountId);
