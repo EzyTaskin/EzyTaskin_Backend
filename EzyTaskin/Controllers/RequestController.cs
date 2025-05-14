@@ -105,6 +105,8 @@ public class RequestController : ControllerBase
 
                 // Populate offers for targeted query
                 request.Offers = await _requestService.GetOffers(requestId.Value).ToListAsync();
+                request.Categories = await _categoryService.GetRequestCategories(request.Id)
+                    .ToListAsync();
 
                 return Ok(request);
             }
@@ -137,7 +139,15 @@ public class RequestController : ControllerBase
         [FromQuery] string? location
     )
     {
-        return Ok(_requestService.FindRequests(keywords, categoryId, location, isCompleted: false));
+        return Ok(
+            _requestService.FindRequests(keywords, categoryId, location, isCompleted: false)
+                .Select(async (r, _, _) =>
+                {
+                    r.Categories = await _categoryService.GetRequestCategories(r.Id)
+                        .ToListAsync();
+                    return r;
+                })
+        );
     }
 
     [HttpPost(nameof(CompleteRequest))]
