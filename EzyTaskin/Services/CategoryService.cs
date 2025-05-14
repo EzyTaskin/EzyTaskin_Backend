@@ -115,7 +115,7 @@ public class CategoryService(DbContextOptions<ApplicationDbContext> dbContextOpt
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var dbCategories = await dbContext.Categories
-            .Join(categoryId, c => c.Id, i => i, (c, _) => c)
+            .Where(c => categoryId.Contains(c.Id))
             .ToListAsync();
 
         if (dbCategories.Count != categoryId.Count)
