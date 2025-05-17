@@ -29,4 +29,7 @@ public static class QueryExtensions
             .Include(r => r.Provider)
                 .ThenInclude(p => p.Account)
             .Include(r => r.Request);
+
+    public static IQueryable<Provider> Saturate(this IQueryable<Provider> query)
+        => query.Include(p => p.Account);
 }
