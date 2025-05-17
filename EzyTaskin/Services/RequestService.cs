@@ -63,8 +63,9 @@ public class RequestService(DbContextOptions<ApplicationDbContext> dbContextOpti
         if (providerId.HasValue)
         {
             query = query
-                .Where(r => r.Selected != null)
-                .Where(r => r.Selected!.Provider.Id == providerId);
+                .Where(r => dbContext.Offers
+                    .Where(o => o.Request.Id == r.Id && o.Provider.Id == providerId)
+                    .Any());
         }
 
         await foreach (var dbRequest in query.AsAsyncEnumerable())
