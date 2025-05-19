@@ -2,12 +2,36 @@ using EzyTaskin.Alerts;
 using EzyTaskin.Data;
 using Microsoft.EntityFrameworkCore;
 
+using AlertSenderCallback = System.Func<
+    EzyTaskin.Alerts.IAlertSender?,
+    System.Guid, string, string, string?,
+    System.Threading.Tasks.Task
+>;
+
 namespace EzyTaskin.Services;
 
 public class NotificationService(DbContextOptions<ApplicationDbContext> dbContextOptions)
     : DbService(dbContextOptions), IAlertSender
 {
-    public event Func<IAlertSender?, Guid, string, string, string?, Task>? OnMessageSent;
+    private List<AlertSenderCallback> _onMessageSentObservers = [];
+
+    public event AlertSenderCallback? OnMessageSent
+    {
+        add
+        {
+            if (value is not null)
+            {
+                _onMessageSentObservers.Add(value);
+            }
+        }
+        remove
+        {
+            if (value is not null)
+            {
+                _onMessageSentObservers.Remove(value);
+            }
+        }
+    }
 
     public async IAsyncEnumerable<Data.Model.Notification> GetNotifications(
         Guid accountId,
@@ -34,16 +58,13 @@ public class NotificationService(DbContextOptions<ApplicationDbContext> dbContex
 
     public async Task SendNotification(Data.Model.Notification notification)
     {
-        if (OnMessageSent is not null)
-        {
-            await OnMessageSent.Invoke(
-                this,
-                notification.Account,
-                notification.Title,
-                notification.Content,
-                notification.FormattedContent
-            );
-        }
+        await Task.WhenAll(_onMessageSentObservers.Select(callback => callback.Invoke(
+            this,
+            notification.Account,
+            notification.Title,
+            notification.Content,
+            notification.FormattedContent
+        )));
     }
 
     private static Data.Model.Notification ToModel(Data.Db.Notification notification)
