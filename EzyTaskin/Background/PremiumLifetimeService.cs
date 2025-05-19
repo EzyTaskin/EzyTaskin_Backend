@@ -93,12 +93,12 @@ class PremiumLifetimeService(
 
                     if (paymentMethod is not null)
                     {
-                        await paymentService.Transfer(
+                        await paymentService.Transfer([
                             new DebitPaymentCommand(
                                 paymentMethod,
                                 Premium.Instance.CalculatePrice(dbProvider.ToModel())
                             )
-                        );
+                        ]);
                         dbProvider.IsPremium = true;
                         dbProvider.IsSubscriptionActive = true;
                         dbProvider.SubscriptionDate = now;

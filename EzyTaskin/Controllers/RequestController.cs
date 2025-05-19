@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using EzyTaskin.Data.Model;
 using EzyTaskin.Services;
+using EzyTaskin.Subscriptions;
 using EzyTaskin.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -232,14 +233,19 @@ public class RequestController : ControllerBase
             {
                 var price = request.Selected.Price ?? request.Budget;
                 price = Math.Min(price, request.Budget);
+                var transactionFee = Premium.Instance.CalculateTransactionFee(provider, price);
 
-                return await _paymentService.Transfer(
+                return await _paymentService.Transfer([
                     new TransferPaymentCommand(
                         consumerPaymentMethod,
                         providerPaymentMethod,
                         price
+                    ),
+                    new DebitPaymentCommand(
+                        providerPaymentMethod,
+                        transactionFee
                     )
-                );
+                ]);
             });
 
             if (completedRequest is null)
@@ -300,11 +306,6 @@ public class RequestController : ControllerBase
 
             if (price.HasValue)
             {
-                if (!provider.IsPremium)
-                {
-                    return Unauthorized(ErrorStrings.PremiumRequired);
-                }
-
                 if (price.Value > request.Budget)
                 {
                     return BadRequest(error: ErrorStrings.OfferPriceExceedsBudget);

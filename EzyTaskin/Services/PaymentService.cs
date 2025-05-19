@@ -49,36 +49,40 @@ public class PaymentService(DbContextOptions<ApplicationDbContext> dbContextOpti
         return (Data.Model.CardPaymentMethod)ToModel(dbCard);
     }
 
-    public async Task<bool> Transfer(Data.Model.PaymentCommand paymentCommand)
+    public async Task<bool> Transfer(ICollection<Data.Model.PaymentCommand> paymentCommands)
     {
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // Get first payment method.
-        var dbFrom = paymentCommand.From != null ?
-            await dbContext.PaymentMethods.SingleAsync(p => p.Id == paymentCommand.From.Id) :
-            null;
-
-        // Get second payment method.
-        var dbTo = paymentCommand.To != null ?
-            await dbContext.PaymentMethods.SingleAsync(p => p.Id == paymentCommand.To.Id) :
-            null;
-
-        if (!await paymentCommand.Execute())
+        foreach (var paymentCommand in paymentCommands)
         {
-            await transaction.RollbackAsync();
-            return false;
+            // Get first payment method.
+            var dbFrom = paymentCommand.From != null ?
+                await dbContext.PaymentMethods.SingleAsync(p => p.Id == paymentCommand.From.Id) :
+                null;
+
+            // Get second payment method.
+            var dbTo = paymentCommand.To != null ?
+                await dbContext.PaymentMethods.SingleAsync(p => p.Id == paymentCommand.To.Id) :
+                null;
+
+            if (!await paymentCommand.Execute())
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            await dbContext.PaymentCommands.AddAsync(new()
+            {
+                From = dbFrom,
+                To = dbTo,
+                Amount = paymentCommand.Amount,
+                Type = dbContext.GetType().Name
+            });
+
+            await dbContext.SaveChangesAsync();
         }
 
-        await dbContext.PaymentCommands.AddAsync(new()
-        {
-            From = dbFrom,
-            To = dbTo,
-            Amount = paymentCommand.Amount,
-            Type = dbContext.GetType().Name
-        });
-
-        await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
         return true;
     }

@@ -222,12 +222,12 @@ public class ProfileController : ControllerBase
 
                 try
                 {
-                    if (!await _paymentService.Transfer(
+                    if (!await _paymentService.Transfer([
                         new DebitPaymentCommand(
                             validPaymentMethods[paymentMethod.Value],
                             Premium.Instance.CalculatePrice(provider)
                         )
-                    ))
+                    ]))
                     {
                         return null;
                     }

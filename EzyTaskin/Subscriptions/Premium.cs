@@ -15,4 +15,14 @@ public class Premium
         }
         return 8.99m;
     }
+
+    public decimal CalculateTransactionFee(Data.Model.Provider provider, decimal value)
+    {
+        if (provider.IsPremium)
+        {
+            return 0.0m;
+        }
+
+        return value * 0.1m;
+    }
 }
