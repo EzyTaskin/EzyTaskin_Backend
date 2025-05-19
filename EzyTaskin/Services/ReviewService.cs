@@ -7,7 +7,7 @@ namespace EzyTaskin.Services;
 public class ReviewService(DbContextOptions<ApplicationDbContext> dbContextOptions)
     : DbService(dbContextOptions)
 {
-    public async Task<Data.Model.Review> AddReview(Data.Model.Review review)
+    public async Task<Data.Model.Review?> AddReview(Data.Model.Review review)
     {
         using var dbContext = DbContext;
         using var transaction = await dbContext.Database.BeginTransactionAsync();
@@ -16,6 +16,13 @@ public class ReviewService(DbContextOptions<ApplicationDbContext> dbContextOptio
             .Include(r => r.Selected)
                 .ThenInclude(o => o!.Provider)
             .SingleAsync(r => r.Id == review.Request);
+
+        if (dbRequest.CompletedDate == null)
+        {
+            dbContext.ChangeTracker.Clear();
+            await transaction.RollbackAsync();
+            return null;
+        }
 
         var dbReview = (await dbContext.Reviews.AddAsync(new()
         {
