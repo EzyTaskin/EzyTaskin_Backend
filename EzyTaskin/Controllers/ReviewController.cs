@@ -52,6 +52,7 @@ public class ReviewController : ControllerBase
 
             var request = await _requestService.GetRequest(requestId);
             if (request is null
+                || request.Selected is null
                 || request.Consumer.Id != consumer.Id
                 || request.CompletedDate == null)
             {
@@ -73,7 +74,7 @@ public class ReviewController : ControllerBase
             await _notificationService.SendNotification(new()
             {
                 Timestamp = DateTime.UtcNow,
-                Account = request.Consumer.Account,
+                Account = request.Selected.Provider.Account,
                 Title = "Reviews",
                 Content =
                     $"A review of your performance in \"{request.Title}\"" +
