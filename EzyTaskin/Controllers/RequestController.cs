@@ -331,7 +331,7 @@ public class RequestController : ControllerBase
                 Title = "Tasks",
                 Content =
                     $"A provider is offering to do \"{request.Title}\"" +
-                        (offer.Price.HasValue ? $" for {offer.Price}." : ".")
+                        (offer.Price.HasValue ? $" for ${offer.Price}." : ".")
             });
 
             return Ok(offer);
