@@ -375,11 +375,18 @@ public class AccountController : ControllerBase
             );
         }
 
+        var externalLoginName = externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Name);
+
         var emailStore = (IUserEmailStore<Account>)_userStore;
         var user = Activator.CreateInstance<Account>();
 
         await _userStore.SetUserNameAsync(user, email, CancellationToken.None);
         await emailStore.SetEmailAsync(user, email, CancellationToken.None);
+
+        if (!string.IsNullOrEmpty(externalLoginName))
+        {
+            user.FullName = externalLoginName;
+        }
 
         var result = await _userManager.CreateAsync(user);
         if (result.Succeeded)
